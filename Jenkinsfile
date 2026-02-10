@@ -122,12 +122,22 @@ pipeline {
                             steps {
                                 script {
                                     echo "Phase 1: Running unit tests..."
-                                    if (IS_ROOT_CHANGED) {
-                                        // Build All: Clean and Test everything
-                                        sh 'mvn clean test jacoco:report'
-                                    } else {
-                                        // Build Specific: Clean and Test changed services + dependencies (-am)
-                                        sh "mvn clean test jacoco:report -pl ${CHANGED_SERVICES} -am"
+                                    // if (IS_ROOT_CHANGED) {
+                                    //     // Build All: Clean and Test everything
+                                    //     sh 'mvn clean test jacoco:report'
+                                    // } else {
+                                    //     // Build Specific: Clean and Test changed services + dependencies (-am)
+                                    //     sh "mvn clean test jacoco:report -pl ${CHANGED_SERVICES} -am"
+                                    // }
+
+                                    withSonarQubeEnv('SonarQube-Local') {
+                                        if (IS_ROOT_CHANGED) {
+                                            // Build All: Clean and Test everything
+                                            sh 'mvn clean test jacoco:report sonar:sonar'
+                                        } else {
+                                            // Build Specific: Clean and Test changed services + dependencies (-am)
+                                            sh "mvn clean test jacoco:report sonar:sonar -pl ${CHANGED_SERVICES} -am"
+                                        }
                                     }
                                 }
                             }
@@ -151,6 +161,14 @@ pipeline {
                                         //     [threshold: 70.0, metric: 'CLASS', baseline: 'PROJECT', criticality: 'FAILURE']
                                         // ]
                                     )
+                                }
+                            }
+                        }
+
+                        stage("Quality Gate") {
+                            steps {
+                                timeout(time: 5, unit: 'MINUTES') {
+                                    waitForQualityGate abortPipeline: true
                                 }
                             }
                         }
