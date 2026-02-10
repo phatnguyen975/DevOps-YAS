@@ -124,11 +124,32 @@ pipeline {
                                     echo "Phase 1: Running unit tests..."
                                     if (IS_ROOT_CHANGED) {
                                         // Build All: Clean and Test everything
-                                        sh 'mvn clean test'
+                                        sh 'mvn clean test jacoco:report'
                                     } else {
                                         // Build Specific: Clean and Test changed services + dependencies (-am)
-                                        sh "mvn clean test -pl ${CHANGED_SERVICES} -am"
+                                        sh "mvn clean test jacoco:report -pl ${CHANGED_SERVICES} -am"
                                     }
+                                }
+                            }
+
+                            post {
+                                always {
+                                    // Upload test results
+                                    junit '**/target/surefire-reports/*.xml'
+
+                                    // Upload coverage
+                                    recordCoverage(
+                                        tools: [[
+                                            parser: 'JACOCO', 
+                                            pattern: '**/target/site/jacoco/jacoco.xml'
+                                        ]],
+                                        qualityGates: [[
+                                            threshold: 70.0, 
+                                            metric: 'LINE', 
+                                            baseline: 'PROJECT', 
+                                            criticality: 'UNSTABLE'
+                                        ]]
+                                    )
                                 }
                             }
                         }
