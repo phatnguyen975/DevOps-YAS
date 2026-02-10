@@ -41,45 +41,45 @@ class LocationServiceTest {
         when(serviceUrlConfig.location()).thenReturn(INVENTORY_URL);
     }
 
-    // @Test
-    // void testGetAddressById_ifNormalCase_returnAddressDetailVm() {
+    @Test
+    void testGetAddressById_ifNormalCase_returnAddressDetailVm() {
 
-    //     Long addressId = 1L;
-    //     AddressDetailVm addressDetail = AddressDetailVm.builder()
-    //         .id(1L)
-    //         .contactName("John Doe")
-    //         .phone("123-456-7890")
-    //         .addressLine1("123 Main St")
-    //         .addressLine2("Apt 4B")
-    //         .city("Metropolis")
-    //         .zipCode("12345")
-    //         .districtId(100L)
-    //         .districtName("Central District")
-    //         .stateOrProvinceId(200L)
-    //         .stateOrProvinceName("StateName")
-    //         .countryId(300L)
-    //         .countryName("CountryName")
-    //         .build();
+        Long addressId = 1L;
+        AddressDetailVm addressDetail = AddressDetailVm.builder()
+            .id(1L)
+            .contactName("John Doe")
+            .phone("123-456-7890")
+            .addressLine1("123 Main St")
+            .addressLine2("Apt 4B")
+            .city("Metropolis")
+            .zipCode("12345")
+            .districtId(100L)
+            .districtName("Central District")
+            .stateOrProvinceId(200L)
+            .stateOrProvinceName("StateName")
+            .countryId(300L)
+            .countryName("CountryName")
+            .build();
 
-    //     final URI url = UriComponentsBuilder
-    //         .fromHttpUrl(serviceUrlConfig.location())
-    //         .path("/storefront/addresses/{id}")
-    //         .buildAndExpand(addressId)
-    //         .toUri();
+        final URI url = UriComponentsBuilder
+            .fromHttpUrl(serviceUrlConfig.location())
+            .path("/storefront/addresses/{id}")
+            .buildAndExpand(addressId)
+            .toUri();
 
-    //     RestClient.RequestHeadersUriSpec requestHeadersUriSpec = Mockito.mock(RestClient.RequestHeadersUriSpec.class);
-    //     when(restClient.get()).thenReturn(requestHeadersUriSpec);
-    //     when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
-    //     when(requestHeadersUriSpec.headers(any())).thenReturn(requestHeadersUriSpec);
-    //     when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
-    //     when(responseSpec.body(AddressDetailVm.class))
-    //         .thenReturn(addressDetail);
+        RestClient.RequestHeadersUriSpec requestHeadersUriSpec = Mockito.mock(RestClient.RequestHeadersUriSpec.class);
+        when(restClient.get()).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.uri(url)).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.headers(any())).thenReturn(requestHeadersUriSpec);
+        when(requestHeadersUriSpec.retrieve()).thenReturn(responseSpec);
+        when(responseSpec.body(AddressDetailVm.class))
+            .thenReturn(addressDetail);
 
-    //     AddressDetailVm result = locationService.getAddressById(addressId);
+        AddressDetailVm result = locationService.getAddressById(addressId);
 
-    //     assertNotNull(result);
-    //     assertThat(result.id()).isEqualTo(1L);
-    // }
+        assertNotNull(result);
+        assertThat(result.id()).isEqualTo(1L);
+    }
 
     @Test
     void testCreateAddress_ifNormalCase_returnAddressVm() {
