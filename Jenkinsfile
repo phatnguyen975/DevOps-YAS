@@ -130,7 +130,8 @@ pipeline {
                                     snykInstallation: 'snyk-latest',
                                     snykTokenId: 'snyk-token',
                                     targetFile: 'pom.xml',
-                                    additionalArguments: '--all-projects --severity-threshold=high'
+                                    severity: '--severity-threshold=high',
+                                    additionalArguments: '--all-projects'
                                 )
                             }
                         }
@@ -215,7 +216,7 @@ pipeline {
                                 snykInstallation: 'snyk-latest',
                                 snykTokenId: 'snyk-token',
                                 targetFile: 'package.json',
-                                additionalArguments: '--severity-threshold=high'
+                                severity: '--severity-threshold=high'
                             )
 
                             sh 'npm run build'
@@ -236,7 +237,7 @@ pipeline {
                                 snykInstallation: 'snyk-latest',
                                 snykTokenId: 'snyk-token',
                                 targetFile: 'package.json',
-                                additionalArguments: '--severity-threshold=high'
+                                severity: '--severity-threshold=high'
                             )
 
                             sh 'npm run build'
