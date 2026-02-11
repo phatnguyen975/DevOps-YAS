@@ -159,7 +159,11 @@ pipeline {
                                             def services = CHANGED_SERVICES.split(',')
                                             for (service in services) {
                                                 echo ">>> Snyk scanning: ${service}"
-                                                sh "${snykCmd} test --file=${service}/pom.xml --severity-threshold=high"
+                                                dir(service) {
+                                                    sh 'chmod +x ./mvnw'
+                                                    sh "${snykCmd} test --severity-threshold=high"
+                                                }
+                                                // sh "${snykCmd} test --file=${service}/pom.xml --severity-threshold=high"
                                             }
                                         }
                                     }
