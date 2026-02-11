@@ -132,10 +132,13 @@ pipeline {
                                         def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
                                         def snykCmd = "${snykHome}/snyk-linux"
 
+                                        def isMain = (env.BRANCH_NAME == 'main')
+                                        def isPRToMain = (env.CHANGE_ID && env.CHANGE_TARGET == 'main')
+
                                         if (IS_ROOT_CHANGED) {
                                             echo "Preparing full scan..."
                                             sh "mvn install -DskipTests -q"
-                                            if (env.BRANCH_NAME == 'main') {
+                                            if (isMain || isPRToMain) {
                                                 sh "${snykCmd} test --all-projects --severity-threshold=high"
                                             } else {
                                                 sh "${snykCmd} test --all-projects --severity-threshold=high || true"
@@ -149,7 +152,7 @@ pipeline {
                                                 echo ">>> Snyk scanning: ${service}"
                                                 dir(service) {
                                                     sh 'chmod +x ./mvnw'
-                                                    if (env.BRANCH_NAME == 'main') {
+                                                    if (isMain || isPRToMain) {
                                                         sh "${snykCmd} test --severity-threshold=high"
                                                     } else {
                                                         sh "${snykCmd} test --severity-threshold=high || true"
@@ -243,7 +246,9 @@ pipeline {
                                     sh 'npm install'
 
                                     echo "Scanning Backoffice dependencies..."
-                                    if (env.BRANCH_NAME == 'main') {
+                                    def isMain = (env.BRANCH_NAME == 'main')
+                                    def isPRToMain = (env.CHANGE_ID && env.CHANGE_TARGET == 'main')
+                                    if (isMain || isPRToMain) {
                                         sh "${snykCmd} test --severity-threshold=high"
                                     } else {
                                         sh "${snykCmd} test --severity-threshold=high || true"
@@ -271,7 +276,9 @@ pipeline {
                                     sh 'npm install'
 
                                     echo "Scanning Storefront dependencies..."
-                                    if (env.BRANCH_NAME == 'main') {
+                                    def isMain = (env.BRANCH_NAME == 'main')
+                                    def isPRToMain = (env.CHANGE_ID && env.CHANGE_TARGET == 'main')
+                                    if (isMain || isPRToMain) {
                                         sh "${snykCmd} test --severity-threshold=high"
                                     } else {
                                         sh "${snykCmd} test --severity-threshold=high || true"
