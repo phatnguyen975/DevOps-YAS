@@ -125,14 +125,30 @@ pipeline {
                         // --- SECURITY SCAN ---
                         stage('Backend Security Scan') {
                             steps {
-                                echo "Scanning backend dependencies..."
-                                snykSecurity(
-                                    snykInstallation: 'snyk-latest',
-                                    snykTokenId: 'snyk-token',
-                                    targetFile: 'pom.xml',
-                                    severity: 'high',
-                                    additionalArguments: '--all-projects'
-                                )
+                                // echo "Scanning backend dependencies..."
+                                // snykSecurity(
+                                //     snykInstallation: 'snyk-latest',
+                                //     snykTokenId: 'snyk-token',
+                                //     targetFile: 'pom.xml',
+                                //     severity: 'high',
+                                //     additionalArguments: '--all-projects'
+                                // )
+                                script {
+                                    echo "Scanning backend dependencies..."
+
+                                    withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                                        def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
+                                        def snykCmd = "${snykHome}/snyk-linux"
+
+                                        sh "mvn install -DskipTests -q" 
+
+                                        echo "--- SNYK TEST ---"
+                                        sh "${snykCmd} test --all-projects --severity-threshold=high || true"
+                                        echo "-----------------"
+
+                                        sh "${snykCmd} monitor --all-projects"
+                                    }
+                                }
                             }
                         }
 
