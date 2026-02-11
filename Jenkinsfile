@@ -122,6 +122,19 @@ pipeline {
                 stage('Backend Pipeline') {
                     when { expression { return IS_ROOT_CHANGED || CHANGED_SERVICES != "" } }
                     stages {
+                        // --- SECURITY SCAN ---
+                        stage('Backend Security Scan') {
+                            steps {
+                                echo "Scanning backend dependencies..."
+                                snykSecurity(
+                                    snykInstallation: 'snyk-latest',
+                                    snykTokenId: 'snyk-token',
+                                    targetFile: 'pom.xml',
+                                    additionalArguments: '--all-projects --severity-threshold=high'
+                                )
+                            }
+                        }
+
                         // --- PHASE 1: UNIT TEST & COVERAGE ---
                         stage('Unit Test') {
                             steps {
@@ -196,6 +209,15 @@ pipeline {
                         dir('backoffice') {
                             echo "Building Backoffice UI..."
                             sh 'npm install'
+
+                            echo "Scanning Backoffice dependencies..."
+                            snykSecurity(
+                                snykInstallation: 'snyk-latest',
+                                snykTokenId: 'snyk-token',
+                                targetFile: 'package.json',
+                                additionalArguments: '--severity-threshold=high'
+                            )
+
                             sh 'npm run build'
                         }
                     }
@@ -208,6 +230,15 @@ pipeline {
                         dir('storefront') {
                             echo "Building Storefront UI..."
                             sh 'npm install'
+
+                            echo "Scanning Storefront dependencies..."
+                            snykSecurity(
+                                snykInstallation: 'snyk-latest',
+                                snykTokenId: 'snyk-token',
+                                targetFile: 'package.json',
+                                additionalArguments: '--severity-threshold=high'
+                            )
+
                             sh 'npm run build'
                         }
                     }
