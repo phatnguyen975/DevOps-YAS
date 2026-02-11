@@ -125,28 +125,12 @@ pipeline {
                         // --- SECURITY SCAN ---
                         stage('Backend Security Scan') {
                             steps {
-                                // echo "Scanning backend dependencies..."
-                                // snykSecurity(
-                                //     snykInstallation: 'snyk-latest',
-                                //     snykTokenId: 'snyk-token',
-                                //     targetFile: 'pom.xml',
-                                //     severity: 'high',
-                                //     additionalArguments: '--all-projects'
-                                // )
                                 script {
                                     echo "Scanning backend dependencies..."
 
                                     withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                                         def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
                                         def snykCmd = "${snykHome}/snyk-linux"
-
-                                        // sh "mvn install -DskipTests -q -pl ${CHANGED_SERVICES} -am" 
-
-                                        // echo "--- SNYK TEST ---"
-                                        // sh "${snykCmd} test --all-projects --severity-threshold=high"
-                                        // echo "-----------------"
-
-                                        // sh "${snykCmd} monitor --all-projects"
 
                                         if (IS_ROOT_CHANGED) {
                                             echo "Preparing full scan..."
@@ -165,7 +149,6 @@ pipeline {
                                                     sh "${snykCmd} test --severity-threshold=high"
                                                     sh "${snykCmd} monitor"
                                                 }
-                                                // sh "${snykCmd} test --file=${service}/pom.xml --severity-threshold=high"
                                             }
                                         }
                                     }
