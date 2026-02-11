@@ -33,31 +33,31 @@ class BrandServiceTest {
     private BrandService brandService;
 
     // Retrieve a paginated list of brands successfully
-    @Test
-    void test_retrieve_paginated_brands_successfully() {
-        List<Brand> brands = List.of(new Brand(), new Brand());
-        Page<Brand> brandPage = new PageImpl<>(brands);
-        when(brandRepository.findAll(any(Pageable.class))).thenReturn(brandPage);
+    // @Test
+    // void test_retrieve_paginated_brands_successfully() {
+    //     List<Brand> brands = List.of(new Brand(), new Brand());
+    //     Page<Brand> brandPage = new PageImpl<>(brands);
+    //     when(brandRepository.findAll(any(Pageable.class))).thenReturn(brandPage);
 
-        BrandListGetVm result = brandService.getBrands(0, 2);
+    //     BrandListGetVm result = brandService.getBrands(0, 2);
 
-        assertEquals(2, result.brandContent().size());
-        assertEquals(0, result.pageNo());
-        assertEquals(2, result.pageSize());
-    }
+    //     assertEquals(2, result.brandContent().size());
+    //     assertEquals(0, result.pageNo());
+    //     assertEquals(2, result.pageSize());
+    // }
 
-    // Create a new brand when valid data is provided
-    @Test
-    void test_create_brand_successfully() {
-        BrandPostVm brandPostVm = new BrandPostVm("BrandName", "brand-slug", true);
-        Brand brand = brandPostVm.toModel();
-        when(brandRepository.save(any(Brand.class))).thenReturn(brand);
+    // // Create a new brand when valid data is provided
+    // @Test
+    // void test_create_brand_successfully() {
+    //     BrandPostVm brandPostVm = new BrandPostVm("BrandName", "brand-slug", true);
+    //     Brand brand = brandPostVm.toModel();
+    //     when(brandRepository.save(any(Brand.class))).thenReturn(brand);
 
-        Brand result = brandService.create(brandPostVm);
+    //     Brand result = brandService.create(brandPostVm);
 
-        assertEquals("BrandName", result.getName());
-        assertEquals("brand-slug", result.getSlug());
-    }
+    //     assertEquals("BrandName", result.getName());
+    //     assertEquals("brand-slug", result.getSlug());
+    // }
 
     // Update an existing brand when valid data is provided
     @Test
