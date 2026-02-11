@@ -140,13 +140,28 @@ pipeline {
                                         def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
                                         def snykCmd = "${snykHome}/snyk-linux"
 
-                                        sh "mvn install -DskipTests -q -pl ${CHANGED_SERVICES} -am" 
+                                        // sh "mvn install -DskipTests -q -pl ${CHANGED_SERVICES} -am" 
 
-                                        echo "--- SNYK TEST ---"
-                                        sh "${snykCmd} test --all-projects --severity-threshold=high"
-                                        echo "-----------------"
+                                        // echo "--- SNYK TEST ---"
+                                        // sh "${snykCmd} test --all-projects --severity-threshold=high"
+                                        // echo "-----------------"
 
                                         // sh "${snykCmd} monitor --all-projects"
+
+                                        if (IS_ROOT_CHANGED) {
+                                            echo "Preparing full scan..."
+                                            sh "mvn install -DskipTests -q"
+                                            sh "${snykCmd} test --all-projects --severity-threshold=high"
+                                        } else {
+                                            echo "Optimized scan for: ${CHANGED_SERVICES}"
+                                            sh "mvn install -DskipTests -q -pl ${CHANGED_SERVICES} -am"
+
+                                            def services = CHANGED_SERVICES.split(',')
+                                            for (service in services) {
+                                                echo ">>> Snyk scanning: ${service}"
+                                                sh "${snykCmd} test --file=${service}/pom.xml --severity-threshold=high"
+                                            }
+                                        }
                                     }
                                 }
                             }
