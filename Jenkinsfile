@@ -140,13 +140,13 @@ pipeline {
                                         def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
                                         def snykCmd = "${snykHome}/snyk-linux"
 
-                                        sh "mvn install -DskipTests -q" 
+                                        sh "mvn install -DskipTests -q -pl ${CHANGED_SERVICES} -am" 
 
                                         echo "--- SNYK TEST ---"
-                                        sh "${snykCmd} test --all-projects --severity-threshold=high || true"
+                                        sh "${snykCmd} test --all-projects --severity-threshold=high"
                                         echo "-----------------"
 
-                                        sh "${snykCmd} monitor --all-projects"
+                                        // sh "${snykCmd} monitor --all-projects"
                                     }
                                 }
                             }
