@@ -234,23 +234,25 @@ pipeline {
                     when { expression { return BUILD_BACKOFFICE || IS_ROOT_CHANGED } }
                     steps {
                         dir('backoffice') {
-                            withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                                def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
-                                def snykCmd = "${snykHome}/snyk-linux"
+                            script {
+                                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                                    def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
+                                    def snykCmd = "${snykHome}/snyk-linux"
 
-                                echo "Installing Backoffice dependencies..."
-                                sh 'npm install'
+                                    echo "Installing Backoffice dependencies..."
+                                    sh 'npm install'
 
-                                echo "Scanning Backoffice dependencies..."
-                                if (env.BRANCH_NAME == 'main') {
-                                    sh "${snykCmd} test --severity-threshold=high"
-                                } else {
-                                    sh "${snykCmd} test --severity-threshold=high || true"
+                                    echo "Scanning Backoffice dependencies..."
+                                    if (env.BRANCH_NAME == 'main') {
+                                        sh "${snykCmd} test --severity-threshold=high"
+                                    } else {
+                                        sh "${snykCmd} test --severity-threshold=high || true"
+                                    }
                                 }
-                            }
 
-                            echo "Building Backoffice UI..."
-                            sh 'npm run build'
+                                echo "Building Backoffice UI..."
+                                sh 'npm run build'
+                            }
                         }
                     }
                 }
@@ -260,23 +262,25 @@ pipeline {
                     when { expression { return BUILD_STOREFRONT || IS_ROOT_CHANGED } }
                     steps {
                         dir('storefront') {
-                            withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                                def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
-                                def snykCmd = "${snykHome}/snyk-linux"
+                            script {
+                                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                                    def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
+                                    def snykCmd = "${snykHome}/snyk-linux"
 
-                                echo "Installing Storefront dependencies..."
-                                sh 'npm install'
+                                    echo "Installing Storefront dependencies..."
+                                    sh 'npm install'
 
-                                echo "Scanning Storefront dependencies..."
-                                if (env.BRANCH_NAME == 'main') {
-                                    sh "${snykCmd} test --severity-threshold=high"
-                                } else {
-                                    sh "${snykCmd} test --severity-threshold=high || true"
+                                    echo "Scanning Storefront dependencies..."
+                                    if (env.BRANCH_NAME == 'main') {
+                                        sh "${snykCmd} test --severity-threshold=high"
+                                    } else {
+                                        sh "${snykCmd} test --severity-threshold=high || true"
+                                    }
                                 }
-                            }
 
-                            echo "Building Storefront UI..."
-                            sh 'npm run build'
+                                echo "Building Storefront UI..."
+                                sh 'npm run build'
+                            }
                         }
                     }
                 }
