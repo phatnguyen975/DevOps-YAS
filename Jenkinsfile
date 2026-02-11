@@ -132,6 +132,8 @@ pipeline {
                                         def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
                                         def snykCmd = "${snykHome}/snyk-linux"
 
+                                        sh "${snykCmd} auth ${SNYK_TOKEN}"
+
                                         if (IS_ROOT_CHANGED) {
                                             echo "Preparing full scan..."
                                             sh "mvn install -DskipTests -q"
