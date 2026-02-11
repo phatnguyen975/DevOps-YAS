@@ -152,6 +152,7 @@ pipeline {
                                             echo "Preparing full scan..."
                                             sh "mvn install -DskipTests -q"
                                             sh "${snykCmd} test --all-projects --severity-threshold=high"
+                                            sh "${snykCmd} monitor --all-projects"
                                         } else {
                                             echo "Optimized scan for: ${CHANGED_SERVICES}"
                                             sh "mvn install -DskipTests -q -pl ${CHANGED_SERVICES} -am"
@@ -162,6 +163,7 @@ pipeline {
                                                 dir(service) {
                                                     sh 'chmod +x ./mvnw'
                                                     sh "${snykCmd} test --severity-threshold=high"
+                                                    sh "${snykCmd} monitor"
                                                 }
                                                 // sh "${snykCmd} test --file=${service}/pom.xml --severity-threshold=high"
                                             }
