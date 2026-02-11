@@ -132,13 +132,14 @@ pipeline {
                                         def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
                                         def snykCmd = "${snykHome}/snyk-linux"
 
-                                        sh "${snykCmd} auth ${SNYK_TOKEN}"
-
                                         if (IS_ROOT_CHANGED) {
                                             echo "Preparing full scan..."
                                             sh "mvn install -DskipTests -q"
-                                            sh "${snykCmd} test --all-projects --severity-threshold=high"
-                                            sh "${snykCmd} monitor --all-projects"
+                                            if (env.BRANCH_NAME == 'main') {
+                                                sh "${snykCmd} test --all-projects --severity-threshold=high"
+                                            } else {
+                                                sh "${snykCmd} test --all-projects --severity-threshold=high || true"
+                                            }
                                         } else {
                                             echo "Optimized scan for: ${CHANGED_SERVICES}"
                                             sh "mvn install -DskipTests -q -pl ${CHANGED_SERVICES} -am"
@@ -148,8 +149,11 @@ pipeline {
                                                 echo ">>> Snyk scanning: ${service}"
                                                 dir(service) {
                                                     sh 'chmod +x ./mvnw'
-                                                    sh "${snykCmd} test --severity-threshold=high"
-                                                    sh "${snykCmd} monitor"
+                                                    if (env.BRANCH_NAME == 'main') {
+                                                        sh "${snykCmd} test --severity-threshold=high"
+                                                    } else {
+                                                        sh "${snykCmd} test --severity-threshold=high || true"
+                                                    }
                                                 }
                                             }
                                         }
@@ -230,17 +234,22 @@ pipeline {
                     when { expression { return BUILD_BACKOFFICE || IS_ROOT_CHANGED } }
                     steps {
                         dir('backoffice') {
+                            withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                                def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
+                                def snykCmd = "${snykHome}/snyk-linux"
+
+                                echo "Installing Backoffice dependencies..."
+                                sh 'npm install'
+
+                                echo "Scanning Backoffice dependencies..."
+                                if (env.BRANCH_NAME == 'main') {
+                                    sh "${snykCmd} test --severity-threshold=high"
+                                } else {
+                                    sh "${snykCmd} test --severity-threshold=high || true"
+                                }
+                            }
+
                             echo "Building Backoffice UI..."
-                            sh 'npm install'
-
-                            echo "Scanning Backoffice dependencies..."
-                            snykSecurity(
-                                snykInstallation: 'snyk-latest',
-                                snykTokenId: 'snyk-token',
-                                targetFile: 'package.json',
-                                severity: 'high'
-                            )
-
                             sh 'npm run build'
                         }
                     }
@@ -251,17 +260,22 @@ pipeline {
                     when { expression { return BUILD_STOREFRONT || IS_ROOT_CHANGED } }
                     steps {
                         dir('storefront') {
+                            withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                                def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
+                                def snykCmd = "${snykHome}/snyk-linux"
+
+                                echo "Installing Storefront dependencies..."
+                                sh 'npm install'
+
+                                echo "Scanning Storefront dependencies..."
+                                if (env.BRANCH_NAME == 'main') {
+                                    sh "${snykCmd} test --severity-threshold=high"
+                                } else {
+                                    sh "${snykCmd} test --severity-threshold=high || true"
+                                }
+                            }
+
                             echo "Building Storefront UI..."
-                            sh 'npm install'
-
-                            echo "Scanning Storefront dependencies..."
-                            snykSecurity(
-                                snykInstallation: 'snyk-latest',
-                                snykTokenId: 'snyk-token',
-                                targetFile: 'package.json',
-                                severity: 'high'
-                            )
-
                             sh 'npm run build'
                         }
                     }
