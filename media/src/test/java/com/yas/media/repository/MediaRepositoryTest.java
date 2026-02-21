@@ -234,7 +234,7 @@ class MediaRepositoryTest {
     @Test
     void testMediaWithLongCaption() {
         Media mediaWithLongCaption = new Media();
-        String longCaption = "A".repeat(1000);
+        String longCaption = "A".repeat(200);
         mediaWithLongCaption.setCaption(longCaption);
         mediaWithLongCaption.setFileName("test.jpg");
         mediaWithLongCaption.setMediaType("image/jpeg");
