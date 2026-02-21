@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Path;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.Set;
@@ -24,6 +25,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.context.request.WebRequest;
 
 class ControllerAdvisorTest {
 
@@ -241,5 +243,29 @@ class ControllerAdvisorTest {
         assertNotNull(response.getBody());
         assertEquals(1, response.getBody().fieldErrors().size());
         assertEquals("fileName must not be empty", response.getBody().fieldErrors().get(0));
+    }
+
+    @Test
+    void handleMediaFileException() {
+        MediaFileException exception = new MediaFileException("Failed to read file: /path/to/file.jpg");
+        WebRequest request = mock(WebRequest.class);
+
+        ResponseEntity<ErrorVm> response = controllerAdvisor.handleIoException(exception, request);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertNotNull(response.getBody());
+    }
+
+    @Test
+    void handleMediaFileExceptionWithCause() {
+        IOException cause = new IOException("File not found");
+        MediaFileException exception = new MediaFileException("Failed to read file", cause);
+        WebRequest request = mock(WebRequest.class);
+
+        ResponseEntity<ErrorVm> response = controllerAdvisor.handleIoException(exception, request);
+
+        assertNotNull(response);
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
     }
 }

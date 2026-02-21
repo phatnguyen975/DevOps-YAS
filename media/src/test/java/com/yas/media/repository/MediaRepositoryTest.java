@@ -161,4 +161,87 @@ class MediaRepositoryTest {
         assertEquals("image/jpeg", savedJpeg.getMediaType());
         assertEquals("image/png", savedPng.getMediaType());
     }
+
+    @Test
+    void testFindByIdWithoutFileInReturn_whenMediaExists_thenReturnNoFileMediaVm() {
+        Media saved = mediaRepository.save(testMedia);
+
+        NoFileMediaVm result = mediaRepository.findByIdWithoutFileInReturn(saved.getId());
+
+        assertNotNull(result);
+        assertEquals(saved.getId(), result.id());
+        assertEquals("Test Image", result.caption());
+        assertEquals("test.jpg", result.fileName());
+        assertEquals("image/jpeg", result.mediaType());
+    }
+
+    @Test
+    void testFindByIdWithoutFileInReturn_whenMediaNotExists_thenReturnNull() {
+        NoFileMediaVm result = mediaRepository.findByIdWithoutFileInReturn(9999L);
+
+        assertNull(result);
+    }
+
+    @Test
+    void testSaveAndUpdateMedia() {
+        Media saved = mediaRepository.save(testMedia);
+        Long savedId = saved.getId();
+
+        Media toUpdate = mediaRepository.findById(savedId).orElse(null);
+        assertNotNull(toUpdate);
+        toUpdate.setCaption("Updated Caption");
+        
+        Media updated = mediaRepository.save(toUpdate);
+
+        assertEquals(savedId, updated.getId());
+        assertEquals("Updated Caption", updated.getCaption());
+    }
+
+    @Test
+    void testFindAllById() {
+        Media media1 = new Media();
+        media1.setCaption("Image 1");
+        media1.setFileName("image1.jpg");
+        media1.setMediaType("image/jpeg");
+        
+        Media media2 = new Media();
+        media2.setCaption("Image 2");
+        media2.setFileName("image2.png");
+        media2.setMediaType("image/png");
+
+        Media savedMedia1 = mediaRepository.save(media1);
+        Media savedMedia2 = mediaRepository.save(media2);
+
+        java.util.List<Media> results = mediaRepository.findAllById(java.util.Arrays.asList(savedMedia1.getId(), savedMedia2.getId()));
+
+        assertEquals(2, results.size());
+    }
+
+    @Test
+    void testMediaWithNullCaption() {
+        Media mediaWithNullCaption = new Media();
+        mediaWithNullCaption.setCaption(null);
+        mediaWithNullCaption.setFileName("test.jpg");
+        mediaWithNullCaption.setMediaType("image/jpeg");
+        mediaWithNullCaption.setFilePath("/path/test.jpg");
+
+        Media saved = mediaRepository.save(mediaWithNullCaption);
+
+        assertNotNull(saved);
+        assertNull(saved.getCaption());
+    }
+
+    @Test
+    void testMediaWithLongCaption() {
+        Media mediaWithLongCaption = new Media();
+        String longCaption = "A".repeat(1000);
+        mediaWithLongCaption.setCaption(longCaption);
+        mediaWithLongCaption.setFileName("test.jpg");
+        mediaWithLongCaption.setMediaType("image/jpeg");
+        mediaWithLongCaption.setFilePath("/path/test.jpg");
+
+        Media saved = mediaRepository.save(mediaWithLongCaption);
+
+        assertEquals(longCaption, saved.getCaption());
+    }
 }

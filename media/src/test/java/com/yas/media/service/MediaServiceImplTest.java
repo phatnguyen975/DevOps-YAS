@@ -336,12 +336,12 @@ class MediaServiceImplTest {
     @Test
     void getFile_whenMediaFoundAndFileNameMatches_thenReturnFile() {
         byte[] fileContent = "test content".getBytes();
-        Media media = new Media();
-        media.setId(1L);
-        media.setFileName("test.jpg");
-        media.setMediaType("image/jpeg");
+        Media mediaTest = new Media();
+        mediaTest.setId(1L);
+        mediaTest.setFileName("test.jpg");
+        mediaTest.setMediaType("image/jpeg");
 
-        when(mediaRepository.findById(1L)).thenReturn(Optional.of(media));
+        when(mediaRepository.findById(1L)).thenReturn(Optional.of(mediaTest));
         when(fileSystemRepository.getFile("/path/test.jpg")).thenReturn(new ByteArrayInputStream(fileContent));
 
         MediaDto mediaDto = mediaService.getFile(1L, "test.jpg");
@@ -352,12 +352,12 @@ class MediaServiceImplTest {
 
     @Test
     void getFile_whenFileNameDifferentCase_thenReturnEmpty() {
-        Media media = new Media();
-        media.setId(1L);
-        media.setFileName("test.jpg");
-        media.setMediaType("image/jpeg");
+        Media mediaTest = new Media();
+        mediaTest.setId(1L);
+        mediaTest.setFileName("test.jpg");
+        mediaTest.setMediaType("image/jpeg");
 
-        when(mediaRepository.findById(1L)).thenReturn(Optional.of(media));
+        when(mediaRepository.findById(1L)).thenReturn(Optional.of(mediaTest));
 
         MediaDto mediaDto = mediaService.getFile(1L, "TEST.JPG");
 
@@ -401,11 +401,11 @@ class MediaServiceImplTest {
     @Test
     void getMediaByIds_whenYasConfigUrlDifferent_thenBuildCorrectUrl() {
         List<Long> ids = Arrays.asList(1L);
-        Media media = getMedia(1L, "image.png");
-        media.setCaption("Test");
-        media.setMediaType("image/png");
+        Media mediaTest = getMedia(1L, "image.png");
+        mediaTest.setCaption("Test");
+        mediaTest.setMediaType("image/png");
 
-        when(mediaRepository.findAllById(ids)).thenReturn(Arrays.asList(media));
+        when(mediaRepository.findAllById(ids)).thenReturn(Arrays.asList(mediaTest));
         when(mediaVmMapper.toVm(any(Media.class))).thenReturn(new MediaVm(1L, "Test", "image.png", "image/png", null));
         when(yasConfig.publicUrl()).thenReturn("https://cdn.example.com");
 
@@ -434,12 +434,12 @@ class MediaServiceImplTest {
 
     @Test
     void getFile_whenMediaTypeIsNull_thenHandleGracefully() {
-        Media media = new Media();
-        media.setId(1L);
-        media.setFileName("test.jpg");
-        media.setMediaType(null);
+        Media mediaTest = new Media();
+        mediaTest.setId(1L);
+        mediaTest.setFileName("test.jpg");
+        mediaTest.setMediaType(null);
 
-        when(mediaRepository.findById(1L)).thenReturn(Optional.of(media));
+        when(mediaRepository.findById(1L)).thenReturn(Optional.of(mediaTest));
 
         // This should throw an exception when trying to parse null as MediaType
         try {
@@ -448,5 +448,4 @@ class MediaServiceImplTest {
             assertNotNull(e);
         }
     }
-
 }

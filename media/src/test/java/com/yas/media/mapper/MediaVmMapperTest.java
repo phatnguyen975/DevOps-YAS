@@ -159,4 +159,100 @@ class MediaVmMapperTest {
         assertEquals(vm1.getCaption(), vm2.getCaption());
         assertEquals(vm1.getFileName(), vm2.getFileName());
     }
+
+    @Test
+    void testMapperWithAllFieldsPopulated() {
+        Media media = new Media();
+        media.setId(10L);
+        media.setCaption("Complete Image");
+        media.setFileName("complete.jpg");
+        media.setMediaType("image/jpeg");
+        media.setFilePath("/path/to/complete.jpg");
+
+        MediaVm mediaVm = mediaVmMapper.toVm(media);
+
+        assertNotNull(mediaVm);
+        assertEquals(10L, mediaVm.getId());
+        assertEquals("Complete Image", mediaVm.getCaption());
+        assertEquals("complete.jpg", mediaVm.getFileName());
+        assertEquals("image/jpeg", mediaVm.getMediaType());
+    }
+
+    @Test
+    void testMapperWithEmptyStrings() {
+        Media media = new Media();
+        media.setId(5L);
+        media.setCaption("");
+        media.setFileName("");
+        media.setMediaType("");
+
+        MediaVm mediaVm = mediaVmMapper.toVm(media);
+
+        assertNotNull(mediaVm);
+        assertEquals(5L, mediaVm.getId());
+        assertEquals("", mediaVm.getCaption());
+        assertEquals("", mediaVm.getFileName());
+        assertEquals("", mediaVm.getMediaType());
+    }
+
+    @Test
+    void testMediaVmWithLongCaption() {
+        String longCaption = "A".repeat(1000);
+        MediaVm mediaVm = new MediaVm(1L, longCaption, "file.jpg", "image/jpeg", "url");
+
+        Media media = mediaVmMapper.toModel(mediaVm);
+
+        assertEquals(longCaption, media.getCaption());
+    }
+
+    @Test
+    void testMultipleMediaMapping() {
+        for (int i = 1; i <= 5; i++) {
+            Media media = new Media();
+            media.setId((long) i);
+            media.setCaption("Image " + i);
+            media.setFileName("image" + i + ".jpg");
+            media.setMediaType("image/jpeg");
+
+            MediaVm mediaVm = mediaVmMapper.toVm(media);
+
+            assertEquals((long) i, mediaVm.getId());
+            assertEquals("Image " + i, mediaVm.getCaption());
+        }
+    }
+
+    @Test
+    void testPartialUpdateWithAllNullFields() {
+        Media originalMedia = new Media();
+        originalMedia.setId(1L);
+        originalMedia.setCaption("Original");
+        originalMedia.setFileName("original.jpg");
+        originalMedia.setMediaType("image/jpeg");
+
+        MediaVm updateVm = new MediaVm(1L, null, null, null, "url");
+
+        mediaVmMapper.partialUpdate(originalMedia, updateVm);
+
+        // Original values should remain unchanged because update fields are null
+        assertEquals("Original", originalMedia.getCaption());
+        assertEquals("original.jpg", originalMedia.getFileName());
+        assertEquals("image/jpeg", originalMedia.getMediaType());
+    }
+
+    @Test
+    void testMapperWithDifferentMediaTypes() {
+        String[] mediaTypes = {"image/jpeg", "image/png", "image/gif", "image/webp"};
+
+        for (String mediaType : mediaTypes) {
+            Media media = new Media();
+            media.setId(1L);
+            media.setCaption("Test");
+            media.setFileName("test");
+            media.setMediaType(mediaType);
+
+            MediaVm mediaVm = mediaVmMapper.toVm(media);
+
+            assertEquals(mediaType, mediaVm.getMediaType());
+        }
+    }
 }
