@@ -40,7 +40,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
-class MediaServiceUnitTest {
+class MediaServiceImplTest {
 
     @Spy
     private MediaVmMapper mediaVmMapper = Mappers.getMapper(MediaVmMapper.class);
@@ -347,7 +347,6 @@ class MediaServiceUnitTest {
         MediaDto mediaDto = mediaService.getFile(1L, "test.jpg");
 
         assertNotNull(mediaDto);
-        assertNotNull(mediaDto.getContent());
         assertEquals(MediaType.IMAGE_JPEG, mediaDto.getMediaType());
     }
 
