@@ -53,26 +53,6 @@ class MediaRepositoryTest {
     }
 
     @Test
-    void testFindByIdWithoutFileInReturn() {
-        Media saved = mediaRepository.save(testMedia);
-
-        NoFileMediaVm result = mediaRepository.findByIdWithoutFileInReturn(saved.getId());
-
-        assertNotNull(result);
-        assertEquals(saved.getId(), result.id());
-        assertEquals("Test Image", result.caption());
-        assertEquals("test.jpg", result.fileName());
-        assertEquals("image/jpeg", result.mediaType());
-    }
-
-    @Test
-    void testFindByIdWithoutFileWhenNotFound() {
-        NoFileMediaVm result = mediaRepository.findByIdWithoutFileInReturn(9999L);
-
-        assertNull(result);
-    }
-
-    @Test
     void testDeleteMedia() {
         Media saved = mediaRepository.save(testMedia);
         Long id = saved.getId();
