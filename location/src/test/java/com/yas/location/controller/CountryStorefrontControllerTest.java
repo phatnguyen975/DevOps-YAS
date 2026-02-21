@@ -25,8 +25,6 @@ import org.springframework.test.web.servlet.MockMvc;
 @AutoConfigureMockMvc(addFilters = false)
 class CountryStorefrontControllerTest {
 
-    // Test
-
     @MockBean
     private CountryService countryService;
 
