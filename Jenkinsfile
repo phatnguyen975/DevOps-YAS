@@ -197,7 +197,7 @@ pipeline {
                                             VALID_BACKEND_SERVICES = CHANGED_SERVICES.split(',')
                                         }
 
-                                        for (String service : servicesList) {
+                                        for (String service : VALID_BACKEND_SERVICES) {
                                             if (service.trim() == "") continue
 
                                             // Upload coverage results
@@ -238,7 +238,7 @@ pipeline {
                                             VALID_BACKEND_SERVICES = CHANGED_SERVICES.split(',')
                                         }
 
-                                        for (String service : servicesList) {
+                                        for (String service : VALID_BACKEND_SERVICES) {
                                             if (service.trim() == "") continue
                                             
                                             echo ">>> SonarQube scanning: ${service}"
