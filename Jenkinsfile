@@ -44,7 +44,7 @@ pipeline {
 
     environment {
         // Use local repository within the workspace for faster caching
-        MAVEN_OPTS = "-Dmaven.repo.local=.m2/repository"
+        MAVEN_OPTS = "-Dmaven.repo.local=${WORKSPACE}/.m2/repository"
     }
 
     stages {
