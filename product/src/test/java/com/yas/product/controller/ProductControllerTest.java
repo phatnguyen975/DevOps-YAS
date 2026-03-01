@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -125,6 +126,14 @@ class ProductControllerTest {
     }
 
     @Test
+    void testGetProductById_NotFound() throws Exception {
+        when(productService.getProductById(99L)).thenThrow(new com.yas.commonlibrary.exception.NotFoundException("NOT_FOUND", 99L));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/backoffice/products/{productId}", 99))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void testGetFeaturedProductsById() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.get("/storefront/products/list-featured")
                         .param("productId", "1", "2", "3"))
@@ -138,9 +147,26 @@ class ProductControllerTest {
     }
 
     @Test
+    void testGetProductDetail_NotFound() throws Exception {
+        when(productService.getProductDetail("missing")).thenThrow(new com.yas.commonlibrary.exception.NotFoundException("NOT_FOUND", "missing"));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/storefront/product/{slug}", "missing"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void testDeleteProduct() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.delete("/backoffice/products/{id}", 1))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testDeleteProduct_BadRequest() throws Exception {
+        doThrow(new com.yas.commonlibrary.exception.BadRequestException("BAD_REQUEST", 1L))
+            .when(productService).deleteProduct(1L);
+
+        mockMvc.perform(MockMvcRequestBuilders.delete("/backoffice/products/{id}", 1))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -153,6 +179,21 @@ class ProductControllerTest {
                         .param("startPrice", "10.0")
                         .param("endPrice", "100.0"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void testGetProductsByMultiQuery_BadRequest() throws Exception {
+        when(productService.getProductsByMultiQuery(0, 5, "sampleProduct", "sampleCategory", 10.0, 100.0))
+            .thenThrow(new com.yas.commonlibrary.exception.BadRequestException("BAD", "err"));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/storefront/products")
+                        .param("pageNo", "0")
+                        .param("pageSize", "5")
+                        .param("productName", "sampleProduct")
+                        .param("categorySlug", "sampleCategory")
+                        .param("startPrice", "10.0")
+                        .param("endPrice", "100.0"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
