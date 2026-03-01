@@ -21,6 +21,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,6 +55,13 @@ class ProductTemplateServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Set up security context for auditing with proper principal
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+            "testuser", "password", List.of()
+        );
+        auth.setDetails("testuser"); // Ensure getName() returns "testuser"
+        SecurityContextHolder.getContext().setAuthentication(auth);
+        
         productAttribute1 = ProductAttribute.builder().name("productAttribute1").build();
         productAttribute1 = productAttributeRepository.save(productAttribute1);
         productAttribute2 = ProductAttribute.builder().name("productAttribute2").build();
@@ -81,6 +90,8 @@ class ProductTemplateServiceTest {
         productAttributeTemplateRepository.deleteAll();
         productAttributeRepository.deleteAll();
         productTemplateRepository.deleteAll();
+        // Clear security context
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -116,7 +127,7 @@ class ProductTemplateServiceTest {
 
     @Test
     void saveProductTemplate_WhenDuplicateName_ThenThrowDuplicatedException() {
-        ProductTemplatePostVm productTemplatePostVm = new ProductTemplatePostVm("productTemplate1", null);
+        ProductTemplatePostVm productTemplatePostVm = new ProductTemplatePostVm("productTemplate1", List.of());
         DuplicatedException exception = assertThrows(DuplicatedException.class, () -> productTemplateService.saveProductTemplate(productTemplatePostVm));
         assertEquals("Request name productTemplate1 is already existed", exception.getMessage());
 
