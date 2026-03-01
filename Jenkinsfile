@@ -206,12 +206,12 @@ pipeline {
                                                 name: "Coverage: ${service.capitalize()}",
                                                 tools: [[
                                                     parser: 'JACOCO',
-                                                    pattern: "${service}/target/site/jacoco/jacoco.xml",
-                                                    sourceDirectories: [
-                                                        "${service}/src/main/java",
-                                                        "common-library/src/main/java"
-                                                    ]
+                                                    pattern: "${service}/target/site/jacoco/jacoco.xml"
                                                 ]],
+                                                sourceDirectories: [
+                                                    "${service}/src/main/java",
+                                                    "common-library/src/main/java"
+                                                ],
                                                 qualityGates: [
                                                     [threshold: 70.0, metric: 'LINE', baseline: 'PROJECT', criticality: 'UNSTABLE'],
                                                     [threshold: 70.0, metric: 'BRANCH', baseline: 'PROJECT', criticality: 'FAILURE'],
