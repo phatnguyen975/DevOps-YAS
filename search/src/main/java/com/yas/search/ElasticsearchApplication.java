@@ -7,11 +7,12 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration;
 
 @EnableConfigurationProperties(ServiceUrlConfig.class)
-@SpringBootApplication(scanBasePackages = {"com.yas.search", "com.yas.commonlibrary"})
+@SpringBootApplication(scanBasePackages = { "com.yas.search", "com.yas.commonlibrary" })
 @Configuration
 public class ElasticsearchApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(ElasticsearchApplication.class, args);
     }
+
 }
