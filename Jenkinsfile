@@ -295,7 +295,7 @@ pipeline {
                                                 echo ">>> Snyk scanning: ${service}"
                                                 dir(service) {
                                                     sh 'chmod +x ./mvnw'
-                                                    sh "${snykCmd} test --severity-threshold=high --command=mvn"
+                                                    sh "${snykCmd} test --severity-threshold=high --command='./mvnw -Drevision=1.0-SNAPSHOT'"
                                                 }
                                             }
                                         }
