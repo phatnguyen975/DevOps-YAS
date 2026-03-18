@@ -7,7 +7,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @Getter
 public class FilesystemConfig {
-
+// test
     @Value("${file.directory}")
     private String directory;
 
