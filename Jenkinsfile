@@ -40,7 +40,7 @@ def runBackendSonarQube(List<String> services) {
             catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
                 timeout(time: 10, unit: 'MINUTES') {
                     dir(service) {
-                        sh "mvn ${MAVEN_PARALLEL_FLAGS} sonar:sonar"
+                        sh "mvn sonar:sonar"
                     }
                 }
             }
