@@ -36,12 +36,8 @@ def runBackendSonarQube(List<String> services) {
     withSonarQubeEnv('SonarQube-Local') {
         services.each { String service ->
             echo ">>> SonarQube scanning: ${service}"
-            catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
-                timeout(time: 5, unit: 'MINUTES') {
-                    dir(service) {
-                        sh "mvn sonar:sonar"
-                    }
-                }
+            dir(service) {
+                sh "mvn sonar:sonar"
             }
         }
     }
@@ -54,13 +50,8 @@ def runBackendSnyk(List<String> services) {
 
         services.each { String service ->
             echo ">>> Snyk scanning: ${service}"
-            catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
-                timeout(time: 5, unit: 'MINUTES') {
-                    dir(service) {
-                        sh 'chmod +x ./mvnw'
-                        sh "${snykCmd} test --severity-threshold=high"
-                    }
-                }
+            dir(service) {
+                sh "${snykCmd} test --severity-threshold=high --command='mvn -Dmaven.repo.local=${WORKSPACE}/.m2/repository'"
             }
         }
     }
@@ -90,24 +81,16 @@ def runFrontendPipeline(String appName) {
         sh 'npm run lint'
 
         echo "Running SonarQube analysis for ${appName}..."
-        catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
-            timeout(time: 5, unit: 'MINUTES') {
-                withSonarQubeEnv('SonarQube-Local') {
-                    def scannerHome = tool 'SonarScanner'
-                    sh "${scannerHome}/bin/sonar-scanner"
-                }
-            }
+        withSonarQubeEnv('SonarQube-Local') {
+            def scannerHome = tool 'SonarScanner'
+            sh "${scannerHome}/bin/sonar-scanner"
         }
 
         echo "Scanning ${appName} dependencies..."
-        catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
-            timeout(time: 5, unit: 'MINUTES') {
-                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                    def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
-                    def snykCmd = "${snykHome}/snyk-linux"
-                    sh "${snykCmd} test --severity-threshold=high"
-                }
-            }
+        withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+            def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
+            def snykCmd = "${snykHome}/snyk-linux"
+            sh "${snykCmd} test --severity-threshold=high"
         }
 
         echo "Building ${appName} UI..."
