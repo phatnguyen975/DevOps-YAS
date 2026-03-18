@@ -295,7 +295,7 @@ pipeline {
                                                 echo ">>> Snyk scanning: ${service}"
                                                 dir(service) {
                                                     sh 'chmod +x ./mvnw'
-                                                    sh "${snykCmd} test --severity-threshold=high --command='./mvnw -Drevision=1.0-SNAPSHOT'"
+                                                    sh "${snykCmd} test --severity-threshold=high --command=\"./mvnw -Dmaven.repo.local=${WORKSPACE}/.m2/repository -Drevision=1.0-SNAPSHOT\""
                                                 }
                                             }
                                         }
