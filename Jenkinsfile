@@ -276,9 +276,30 @@ pipeline {
                         // --- PHASE 4: VULNERABILITY SCAN (SNYK) ---
                         stage('Vulnerability Scan') {
                             steps {
+                                // script {
+                                //     echo "Scanning backend dependencies..."
+                                //     runBackendSnyk(resolveBackendServices(IS_ROOT_CHANGED, CHANGED_SERVICES))
+                                // }
+
                                 script {
                                     echo "Scanning backend dependencies..."
-                                    runBackendSnyk(resolveBackendServices(IS_ROOT_CHANGED, CHANGED_SERVICES))
+                                    withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                                        def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
+                                        def snykCmd = "${snykHome}/snyk-linux"
+
+                                        if (IS_ROOT_CHANGED) {
+                                            sh "${snykCmd} test --all-projects --severity-threshold=high --command=mvn"
+                                        } else {
+                                            def services = CHANGED_SERVICES.split(',')
+                                            for (service in services) {
+                                                echo ">>> Snyk scanning: ${service}"
+                                                dir(service) {
+                                                    sh 'chmod +x ./mvnw'
+                                                    sh "${snykCmd} test --severity-threshold=high --command=mvn"
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
