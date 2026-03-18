@@ -29,7 +29,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -37,7 +36,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Import(KafkaIntegrationTestConfiguration.class)
 @PropertySource("classpath:application.properties")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, ProductCdcMessage> {
+public class ProductCdcConsumerTest extends CdcConsumerTest<ProductMsgKey, ProductCdcMessage> {
 
     public static final String STOREFRONT_PRODUCTS_ES_PATH = "/storefront/products-es/{id}";
 
@@ -50,41 +49,42 @@ public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, Product
     @Autowired
     private ProductRepository productRepository;
 
-    @SpyBean
+    @MockitoSpyBean
     private ProductSyncDataService productSyncDataService;
 
-    public ProductCdcConsumerIT() {
+    public ProductCdcConsumerTest() {
         super(ProductMsgKey.class, ProductCdcMessage.class, "dbproduct.public.product");
     }
 
     @AfterEach
-    void tearDown() {
+    public void tearDown() {
         productRepository.deleteAll();
     }
 
     @DisplayName("When having product create event, data must sync as create")
     @Test
-    void test_whenHavingCreateEvent_shouldSyncAsCreate()
-            throws ExecutionException, InterruptedException, TimeoutException {
+    public void test_whenHavingCreateEvent_shouldSyncAsCreate()
+        throws ExecutionException, InterruptedException, TimeoutException {
         // Given
         long productId = 1L;
         ProductEsDetailVm response = getSampleProduct();
 
         // When
         // Simulate Product Detail API response
-        final URI url = UriComponentsBuilder.fromHttpUrl(serviceUrlConfig.product())
-                .path(STOREFRONT_PRODUCTS_ES_PATH)
-                .buildAndExpand(productId)
-                .toUri();
+        final URI url = UriComponentsBuilder.fromUriString(serviceUrlConfig.product())
+            .path(STOREFRONT_PRODUCTS_ES_PATH)
+            .buildAndExpand(productId)
+            .toUri();
         simulateHttpRequestWithResponse(url, response, ProductEsDetailVm.class);
 
         // Sending CDC Event
         sendMsg(
-                ProductMsgKey.builder().id(productId).build(),
-                ProductCdcMessage.builder()
-                        .op(CREATE)
-                        .after(Product.builder().id(productId).isPublished(true).build())
-                        .build());
+            ProductMsgKey.builder().id(productId).build(),
+            ProductCdcMessage.builder()
+                .op(CREATE)
+                .after(Product.builder().id(productId).isPublished(true).build())
+                .build()
+        );
 
         // Then
         // Verify consumer
@@ -98,26 +98,27 @@ public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, Product
 
     @DisplayName("When having product create event, but consumer process failed, consumer must perform retry.")
     @Test
-    void test_whenHavingCreateEvent_thenProcessFailed_shouldPerformRetry()
-            throws ExecutionException, InterruptedException, TimeoutException {
+    public void test_whenHavingCreateEvent_thenProcessFailed_shouldPerformRetry()
+        throws ExecutionException, InterruptedException, TimeoutException {
         // Given
         long productId = 1L;
 
         // When
         // Simulate Product Detail API throw errors
-        final URI url = UriComponentsBuilder.fromHttpUrl(serviceUrlConfig.product())
-                .path(STOREFRONT_PRODUCTS_ES_PATH)
-                .buildAndExpand(productId)
-                .toUri();
+        final URI url = UriComponentsBuilder.fromUriString(serviceUrlConfig.product())
+            .path(STOREFRONT_PRODUCTS_ES_PATH)
+            .buildAndExpand(productId)
+            .toUri();
         simulateHttpRequestWithError(url, new RuntimeException("Invalid Request"), ProductEsDetailVm.class);
 
         // Sending CDC Event
         sendMsg(
-                ProductMsgKey.builder().id(productId).build(),
-                ProductCdcMessage.builder()
-                        .op(CREATE)
-                        .after(Product.builder().id(productId).isPublished(true).build())
-                        .build());
+            ProductMsgKey.builder().id(productId).build(),
+            ProductCdcMessage.builder()
+                .op(CREATE)
+                .after(Product.builder().id(productId).isPublished(true).build())
+                .build()
+        );
 
         // Then
         waitForConsumer(2, 1, 4, 6);
@@ -126,8 +127,8 @@ public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, Product
 
     @DisplayName("When having product update event, data must sync as update")
     @Test
-    void test_whenHavingUpdateEvent_shouldSyncAsUpdate()
-            throws ExecutionException, InterruptedException, TimeoutException {
+    public void test_whenHavingUpdateEvent_shouldSyncAsUpdate()
+        throws ExecutionException, InterruptedException, TimeoutException {
         // Given
         long productId = 1L;
         ProductEsDetailVm response = getSampleProduct();
@@ -138,19 +139,20 @@ public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, Product
 
         // When
         // Simulate Product Detail API response
-        final URI url = UriComponentsBuilder.fromHttpUrl(serviceUrlConfig.product())
-                .path(STOREFRONT_PRODUCTS_ES_PATH)
-                .buildAndExpand(productId)
-                .toUri();
+        final URI url = UriComponentsBuilder.fromUriString(serviceUrlConfig.product())
+            .path(STOREFRONT_PRODUCTS_ES_PATH)
+            .buildAndExpand(productId)
+            .toUri();
         simulateHttpRequestWithResponse(url, response, ProductEsDetailVm.class);
 
         // Sending CDC Event
         sendMsg(
-                ProductMsgKey.builder().id(productId).build(),
-                ProductCdcMessage.builder()
-                        .op(UPDATE)
-                        .after(Product.builder().id(productId).isPublished(true).build())
-                        .build());
+            ProductMsgKey.builder().id(productId).build(),
+            ProductCdcMessage.builder()
+                .op(UPDATE)
+                .after(Product.builder().id(productId).isPublished(true).build())
+                .build()
+        );
 
         // Then
         // Verify Consumer
@@ -165,8 +167,8 @@ public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, Product
 
     @DisplayName("When having product delete event, data must sync as delete")
     @Test
-    void test_whenHavingDeleteEvent_shouldSyncAsDelete()
-            throws ExecutionException, InterruptedException, TimeoutException {
+    public void test_whenHavingDeleteEvent_shouldSyncAsDelete()
+        throws ExecutionException, InterruptedException, TimeoutException {
         // Given
         long productId = 1L;
         ProductEsDetailVm response = getSampleProduct();
@@ -177,19 +179,20 @@ public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, Product
 
         // When
         // Simulate Product Detail API response
-        final URI url = UriComponentsBuilder.fromHttpUrl(serviceUrlConfig.product())
-                .path(STOREFRONT_PRODUCTS_ES_PATH)
-                .buildAndExpand(productId)
-                .toUri();
+        final URI url = UriComponentsBuilder.fromUriString(serviceUrlConfig.product())
+            .path(STOREFRONT_PRODUCTS_ES_PATH)
+            .buildAndExpand(productId)
+            .toUri();
         simulateHttpRequestWithResponse(url, response, ProductEsDetailVm.class);
 
         // Sending CDC Event
         sendMsg(
-                ProductMsgKey.builder().id(productId).build(),
-                ProductCdcMessage.builder()
-                        .op(DELETE)
-                        .after(Product.builder().id(productId).isPublished(true).build())
-                        .build());
+            ProductMsgKey.builder().id(productId).build(),
+            ProductCdcMessage.builder()
+            .op(DELETE)
+            .after(Product.builder().id(productId).isPublished(true).build())
+            .build()
+        );
 
         // Then
         // Verify Consumer
@@ -210,18 +213,19 @@ public class ProductCdcConsumerIT extends CdcConsumerTest<ProductMsgKey, Product
 
     private static @NotNull ProductEsDetailVm getSampleProduct() {
         return new ProductEsDetailVm(
-                1001L,
-                "Wireless Bluetooth Speaker",
-                "wireless-bluetooth-speaker",
-                79.99,
-                true,
-                true,
-                true,
-                false,
-                501L,
-                "SoundWave",
-                List.of("Electronics", "Audio"),
-                List.of("Bluetooth 5.0", "10-hour battery life"));
+            1001L,
+            "Wireless Bluetooth Speaker",
+            "wireless-bluetooth-speaker",
+            79.99,
+            true,
+            true,
+            true,
+            false,
+            501L,
+            "SoundWave",
+            List.of("Electronics", "Audio"),
+            List.of("Bluetooth 5.0", "10-hour battery life")
+        );
     }
 
 }
