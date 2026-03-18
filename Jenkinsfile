@@ -68,7 +68,7 @@ def runBackendSnyk(List<String> services) {
 }
 
 def cleanupLocalM2Repo(int maxSizeGb = 3) {
-    // Keep local Maven cache for speed, but trim aggressively if it grows too large.
+    // Keep local Maven cache for speed, but trim aggressively if it grows too large
     sh """
         if [ -d .m2/repository ]; then
             size_mb=\$(du -sm .m2/repository | cut -f1)
@@ -296,7 +296,7 @@ pipeline {
                             steps {
                                 script {
                                     echo "Scanning backend dependencies..."
-                                    // runBackendSnyk(resolveBackendServices(IS_ROOT_CHANGED, CHANGED_SERVICES))
+                                    runBackendSnyk(resolveBackendServices(IS_ROOT_CHANGED, CHANGED_SERVICES))
                                 }
                             }
                         }
