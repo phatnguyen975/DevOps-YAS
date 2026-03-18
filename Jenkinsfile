@@ -37,8 +37,8 @@ def runBackendSonarQube(List<String> services) {
     withSonarQubeEnv('SonarQube-Local') {
         services.each { String service ->
             echo ">>> SonarQube scanning: ${service}"
-            catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                timeout(time: 10, unit: 'MINUTES') {
+            catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
+                timeout(time: 5, unit: 'MINUTES') {
                     dir(service) {
                         sh "mvn sonar:sonar"
                     }
@@ -55,10 +55,10 @@ def runBackendSnyk(List<String> services) {
 
         services.each { String service ->
             echo ">>> Snyk scanning: ${service}"
-            catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-                timeout(time: 8, unit: 'MINUTES') {
+            catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
+                timeout(time: 5, unit: 'MINUTES') {
                     dir(service) {
-                        sh 'chmod +x ./mvnw'
+                        // sh 'chmod +x ./mvnw'
                         sh "${snykCmd} test --severity-threshold=high --command=mvn"
                     }
                 }
@@ -91,8 +91,8 @@ def runFrontendPipeline(String appName) {
         sh 'npm run lint'
 
         echo "Running SonarQube analysis for ${appName}..."
-        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-            timeout(time: 10, unit: 'MINUTES') {
+        catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
+            timeout(time: 5, unit: 'MINUTES') {
                 withSonarQubeEnv('SonarQube-Local') {
                     def scannerHome = tool 'SonarScanner'
                     sh "${scannerHome}/bin/sonar-scanner"
@@ -101,8 +101,8 @@ def runFrontendPipeline(String appName) {
         }
 
         echo "Scanning ${appName} dependencies..."
-        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
-            timeout(time: 8, unit: 'MINUTES') {
+        catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
+            timeout(time: 5, unit: 'MINUTES') {
                 withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
                     def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
                     def snykCmd = "${snykHome}/snyk-linux"
@@ -285,7 +285,7 @@ pipeline {
                         stage("Quality Gate") {
                             steps {
                                 echo "Checking quality of code..."
-                                timeout(time: 2, unit: 'MINUTES') {
+                                timeout(time: 5, unit: 'MINUTES') {
                                     waitForQualityGate abortPipeline: true
                                 }
                             }
