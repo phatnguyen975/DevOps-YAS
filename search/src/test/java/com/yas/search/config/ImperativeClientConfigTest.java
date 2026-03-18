@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchConnectionDetails;
@@ -40,7 +41,7 @@ class ImperativeClientConfigTest {
         };
 
         ObjectProvider<ElasticsearchConnectionDetails> provider =
-            new StaticListableBeanFactory()
+            new StaticListableBeanFactory(Map.of("elasticsearchConnectionDetails", connectionDetails))
                 .getBeanProvider(ElasticsearchConnectionDetails.class);
 
         ImperativeClientConfig config = new ImperativeClientConfig(dataConfig, provider);
@@ -51,7 +52,7 @@ class ImperativeClientConfigTest {
         assertTrue(clientConfiguration.useSsl());
         assertEquals(
             "Basic " + HttpHeaders.encodeBasicAuth("tc-user", "tc-pass"),
-            clientConfiguration.getHeadersSupplier().get().getFirst(HttpHeaders.AUTHORIZATION));
+            clientConfiguration.getDefaultHeaders().getFirst(HttpHeaders.AUTHORIZATION));
     }
 
     @Test
@@ -72,7 +73,7 @@ class ImperativeClientConfigTest {
         assertTrue(clientConfiguration.useSsl());
         assertEquals(
             "Basic " + HttpHeaders.encodeBasicAuth("cfg-user", "cfg-pass"),
-            clientConfiguration.getHeadersSupplier().get().getFirst(HttpHeaders.AUTHORIZATION));
+            clientConfiguration.getDefaultHeaders().getFirst(HttpHeaders.AUTHORIZATION));
     }
 
     @Test
