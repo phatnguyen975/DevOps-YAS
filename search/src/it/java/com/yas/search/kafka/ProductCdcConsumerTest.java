@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import com.yas.commonlibrary.kafka.cdc.message.Product;
 import com.yas.commonlibrary.kafka.cdc.message.ProductCdcMessage;
 import com.yas.commonlibrary.kafka.cdc.message.ProductMsgKey;
+import com.yas.search.config.EnabledIfDockerAvailable;
 import com.yas.search.config.KafkaIntegrationTestConfiguration;
 import com.yas.search.config.ServiceUrlConfig;
 import com.yas.search.repository.ProductRepository;
@@ -36,6 +37,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 @Import(KafkaIntegrationTestConfiguration.class)
 @PropertySource("classpath:application.properties")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@EnabledIfDockerAvailable
 public class ProductCdcConsumerTest extends CdcConsumerTest<ProductMsgKey, ProductCdcMessage> {
 
     public static final String STOREFRONT_PRODUCTS_ES_PATH = "/storefront/products-es/{id}";
