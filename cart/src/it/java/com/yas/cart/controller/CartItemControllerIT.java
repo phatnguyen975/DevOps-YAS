@@ -31,7 +31,7 @@ import org.springframework.http.HttpStatus;
 @Import(IntegrationTestConfiguration.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 class CartItemControllerIT extends AbstractControllerIT {
-    // test
+
     @Autowired
     private CartItemRepository cartItemRepository;
 
