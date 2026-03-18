@@ -58,8 +58,8 @@ def runBackendSnyk(List<String> services) {
             catchError(buildResult: 'FAILURE', stageResult: 'UNSTABLE') {
                 timeout(time: 5, unit: 'MINUTES') {
                     dir(service) {
-                        // sh 'chmod +x ./mvnw'
-                        sh "${snykCmd} test --severity-threshold=high --command=mvn"
+                        sh 'chmod +x ./mvnw'
+                        sh "${snykCmd} test --severity-threshold=high"
                     }
                 }
             }
