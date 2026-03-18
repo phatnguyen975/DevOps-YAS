@@ -19,6 +19,11 @@ import org.springframework.data.elasticsearch.repository.config.EnableElasticsea
 @RequiredArgsConstructor
 public class ImperativeClientConfig extends ElasticsearchConfiguration {
 
+    private static final String HTTP_PREFIX = "http://";
+    private static final String HTTPS_PREFIX = "https://";
+    private static final int DEFAULT_ELASTICSEARCH_PORT = 9200;
+    private static final String DEFAULT_ELASTICSEARCH_ENDPOINT = "localhost:9200";
+
     private final ElasticsearchDataConfig elasticsearchConfig;
     private final ObjectProvider<ElasticsearchConnectionDetails> elasticsearchConnectionDetailsProvider;
 
@@ -28,8 +33,8 @@ public class ImperativeClientConfig extends ElasticsearchConfiguration {
     @Override
     public ClientConfiguration clientConfiguration() {
         EndpointConfig endpointConfig = resolveEndpointConfig();
-        ClientConfiguration.MaybeSecureClientConfigurationBuilder builder = ClientConfiguration.builder()
-            .connectedTo(endpointConfig.endpoints());
+        MaybeSecureClientConfigurationBuilder builder = ClientConfiguration.builder()
+            .connectedTo(endpointConfig.endpoints().toArray(String[]::new));
 
         if (endpointConfig.useSsl()) {
             builder = (MaybeSecureClientConfigurationBuilder) builder.usingSsl();
@@ -47,67 +52,78 @@ public class ImperativeClientConfig extends ElasticsearchConfiguration {
     }
 
     private EndpointConfig resolveEndpointConfig() {
+        EndpointConfig fromConnectionDetails = resolveFromConnectionDetails();
+        if (fromConnectionDetails != null) {
+            return fromConnectionDetails;
+        }
+
+        EndpointConfig fromUris = resolveFromElasticsearchUris();
+        if (fromUris != null) {
+            return fromUris;
+        }
+
+        return resolveFromConfiguredUrl();
+    }
+
+    private EndpointConfig resolveFromConnectionDetails() {
         ElasticsearchConnectionDetails connectionDetails = elasticsearchConnectionDetailsProvider.getIfAvailable();
-        if (connectionDetails != null && connectionDetails.getNodes() != null && !connectionDetails.getNodes().isEmpty()) {
-            List<ElasticsearchConnectionDetails.Node> nodes = connectionDetails.getNodes();
-            String[] endpoints = nodes.stream()
+        if (connectionDetails == null || connectionDetails.getNodes() == null || connectionDetails.getNodes().isEmpty()) {
+            return null;
+        }
+
+        List<ElasticsearchConnectionDetails.Node> nodes = connectionDetails.getNodes();
+        List<String> endpoints = nodes.stream()
                 .map(node -> node.hostname() + ":" + node.port())
-                .toArray(String[]::new);
-            boolean useSsl = nodes.stream()
+                .toList();
+        boolean useSsl = nodes.stream()
                 .anyMatch(node -> node.protocol() == ElasticsearchConnectionDetails.Node.Protocol.HTTPS);
-            return new EndpointConfig(endpoints, useSsl, connectionDetails.getUsername(), connectionDetails.getPassword());
+        return new EndpointConfig(endpoints, useSsl, connectionDetails.getUsername(), connectionDetails.getPassword());
+    }
+
+    private EndpointConfig resolveFromElasticsearchUris() {
+        if (elasticsearchUris == null || elasticsearchUris.isBlank()) {
+            return null;
         }
 
-        if (elasticsearchUris != null && !elasticsearchUris.isBlank()) {
-            String firstUri = elasticsearchUris.split(",")[0].trim();
-            if (firstUri.startsWith("http://") || firstUri.startsWith("https://")) {
-                URI uri = URI.create(firstUri);
-                int port = uri.getPort() > 0 ? uri.getPort() : 9200;
-                boolean useSsl = firstUri.startsWith("https://");
-                return new EndpointConfig(
-                    new String[] { uri.getHost() + ":" + port },
-                    useSsl,
-                    elasticsearchConfig.getUsername(),
-                    elasticsearchConfig.getPassword());
-            }
-            return new EndpointConfig(
-                new String[] { firstUri },
-                false,
-                elasticsearchConfig.getUsername(),
-                elasticsearchConfig.getPassword());
+        String firstUri = elasticsearchUris.split(",")[0].trim();
+        if (isHttpBasedUri(firstUri)) {
+            URI uri = URI.create(firstUri);
+            int port = uri.getPort() > 0 ? uri.getPort() : DEFAULT_ELASTICSEARCH_PORT;
+            boolean useSsl = firstUri.startsWith(HTTPS_PREFIX);
+            return createConfig(List.of(uri.getHost() + ":" + port), useSsl);
         }
 
+        return createConfig(List.of(firstUri), false);
+    }
+
+    private EndpointConfig resolveFromConfiguredUrl() {
         String configuredUrl = elasticsearchConfig.getUrl();
         if (configuredUrl == null || configuredUrl.isBlank()) {
-            return new EndpointConfig(
-                new String[] { "localhost:9200" },
-                false,
-                elasticsearchConfig.getUsername(),
-                elasticsearchConfig.getPassword());
+            return createConfig(List.of(DEFAULT_ELASTICSEARCH_ENDPOINT), false);
         }
 
-        if (configuredUrl.startsWith("http://") || configuredUrl.startsWith("https://")) {
+        if (isHttpBasedUri(configuredUrl)) {
             URI uri = URI.create(configuredUrl);
-            int port = uri.getPort() > 0 ? uri.getPort() : 9200;
-            boolean useSsl = configuredUrl.startsWith("https://");
-            return new EndpointConfig(
-                new String[] { uri.getHost() + ":" + port },
-                useSsl,
-                elasticsearchConfig.getUsername(),
-                elasticsearchConfig.getPassword());
+            int port = uri.getPort() > 0 ? uri.getPort() : DEFAULT_ELASTICSEARCH_PORT;
+            boolean useSsl = configuredUrl.startsWith(HTTPS_PREFIX);
+            return createConfig(List.of(uri.getHost() + ":" + port), useSsl);
         }
 
         if (!configuredUrl.contains(":")) {
-            configuredUrl = configuredUrl + ":9200";
+            configuredUrl = configuredUrl + ":" + DEFAULT_ELASTICSEARCH_PORT;
         }
 
-        return new EndpointConfig(
-            new String[] { configuredUrl },
-            false,
-            elasticsearchConfig.getUsername(),
-            elasticsearchConfig.getPassword());
+        return createConfig(List.of(configuredUrl), false);
     }
 
-    private record EndpointConfig(String[] endpoints, boolean useSsl, String username, String password) {
+    private boolean isHttpBasedUri(String url) {
+        return url.startsWith(HTTP_PREFIX) || url.startsWith(HTTPS_PREFIX);
+    }
+
+    private EndpointConfig createConfig(List<String> endpoints, boolean useSsl) {
+        return new EndpointConfig(endpoints, useSsl, elasticsearchConfig.getUsername(), elasticsearchConfig.getPassword());
+    }
+
+    private record EndpointConfig(List<String> endpoints, boolean useSsl, String username, String password) {
     }
 }
