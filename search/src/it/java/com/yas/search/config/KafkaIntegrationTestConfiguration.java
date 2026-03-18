@@ -20,7 +20,8 @@ public class KafkaIntegrationTestConfiguration {
     @Bean
     @ServiceConnection
     public KafkaContainer kafkaContainer(DynamicPropertyRegistry registry) {
-        return ContainerFactory.kafkaContainer(registry, kafkaVersion);
+        return ContainerFactory.kafkaContainer(registry, kafkaVersion)
+            .withEnv("KAFKA_HEAP_OPTS", "-Xms256m -Xmx256m");
     }
 
     @Bean
