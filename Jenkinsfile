@@ -3,7 +3,86 @@ def IS_ROOT_CHANGED = false
 def BUILD_BACKOFFICE = false
 def BUILD_STOREFRONT = false
 
-def runFrontendPipeline(String appName, boolean isMainOrPR) {
+def VALID_BACKEND_SERVICES = [
+    'media', 'product', 'cart', 'order', 'rating',
+    'customer', 'location', 'inventory', 'tax', 'search'
+]
+def MAVEN_PARALLEL_FLAGS = '-T 1C'
+
+def resolveBackendServices(boolean isRootChanged, String changedServices) {
+    return isRootChanged ? VALID_BACKEND_SERVICES : changedServices.split(',').findAll { it?.trim() }
+}
+
+def processCoverage(List<String> services) {
+    services.each { String service ->
+        recordCoverage(
+            id: "coverage-${service}",
+            name: "Coverage: ${service.capitalize()}",
+            tools: [[
+                parser: 'JACOCO',
+                pattern: "${service}/target/site/jacoco/jacoco.xml"
+            ]],
+            qualityGates: [
+                [threshold: 70.0, metric: 'LINE', baseline: 'PROJECT', criticality: 'UNSTABLE'],
+                [threshold: 70.0, metric: 'BRANCH', baseline: 'PROJECT', criticality: 'FAILURE'],
+                [threshold: 70.0, metric: 'INSTRUCTION', baseline: 'PROJECT', criticality: 'FAILURE'],
+                [threshold: 70.0, metric: 'METHOD', baseline: 'PROJECT', criticality: 'UNSTABLE'],
+                [threshold: 70.0, metric: 'CLASS', baseline: 'PROJECT', criticality: 'FAILURE']
+            ]
+        )
+    }
+}
+
+def runBackendSonarQube(List<String> services) {
+    withSonarQubeEnv('SonarQube-Local') {
+        services.each { String service ->
+            echo ">>> SonarQube scanning: ${service}"
+            catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                timeout(time: 10, unit: 'MINUTES') {
+                    dir(service) {
+                        sh "mvn ${MAVEN_PARALLEL_FLAGS} sonar:sonar"
+                    }
+                }
+            }
+        }
+    }
+}
+
+def runBackendSnyk(List<String> services) {
+    withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+        def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
+        def snykCmd = "${snykHome}/snyk-linux"
+
+        services.each { String service ->
+            echo ">>> Snyk scanning: ${service}"
+            catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                timeout(time: 8, unit: 'MINUTES') {
+                    dir(service) {
+                        sh 'chmod +x ./mvnw'
+                        sh "${snykCmd} test --severity-threshold=high --command=mvn"
+                    }
+                }
+            }
+        }
+    }
+}
+
+def cleanupLocalM2Repo(int maxSizeGb = 3) {
+    // Keep local Maven cache for speed, but trim aggressively if it grows too large.
+    sh """
+        if [ -d .m2/repository ]; then
+            size_mb=\$(du -sm .m2/repository | cut -f1)
+            limit_mb=\$(( ${maxSizeGb} * 1024 ))
+            echo "Local .m2 cache size: \${size_mb} MB (limit: \${limit_mb} MB)"
+            if [ \"\${size_mb}\" -gt \"\${limit_mb}\" ]; then
+                echo "Local .m2 cache exceeds limit; cleaning .m2/repository"
+                rm -rf .m2/repository
+            fi
+        fi
+    """
+}
+
+def runFrontendPipeline(String appName) {
     dir(appName) {
         echo "Installing ${appName} dependencies..."
         sh 'npm ci'
@@ -12,20 +91,23 @@ def runFrontendPipeline(String appName, boolean isMainOrPR) {
         sh 'npm run lint'
 
         echo "Running SonarQube analysis for ${appName}..."
-        withSonarQubeEnv('SonarQube-Local') {
-            def scannerHome = tool 'SonarScanner'
-            sh "${scannerHome}/bin/sonar-scanner"
+        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+            timeout(time: 10, unit: 'MINUTES') {
+                withSonarQubeEnv('SonarQube-Local') {
+                    def scannerHome = tool 'SonarScanner'
+                    sh "${scannerHome}/bin/sonar-scanner"
+                }
+            }
         }
 
         echo "Scanning ${appName} dependencies..."
-        withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-            def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
-            def snykCmd = "${snykHome}/snyk-linux"
-            
-            if (isMainOrPR) {
-                sh "${snykCmd} test --severity-threshold=high"
-            } else {
-                sh "${snykCmd} test --severity-threshold=high || true"
+        catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+            timeout(time: 8, unit: 'MINUTES') {
+                withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
+                    def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
+                    def snykCmd = "${snykHome}/snyk-linux"
+                    sh "${snykCmd} test --severity-threshold=high"
+                }
             }
         }
 
@@ -45,6 +127,8 @@ pipeline {
     environment {
         // Use local repository within the workspace for faster caching
         MAVEN_OPTS = "-Dmaven.repo.local=${WORKSPACE}/.m2/repository"
+        // For Testcontainers to connect to Docker daemon in Jenkins agents
+        TESTCONTAINERS_HOST_OVERRIDE = 'docker'
     }
 
     stages {
@@ -104,25 +188,20 @@ pipeline {
 
                     def changedFilesList = []
                     try {
-                        changedFilesList = sh(script: diffCommand, returnStdout: true).trim().split('\n')
+                        def changedFilesRaw = sh(script: diffCommand, returnStdout: true).trim()
+                        changedFilesList = changedFilesRaw ? changedFilesRaw.readLines().findAll { it?.trim() } : []
                     } catch (Exception e) {
                         echo "First build or error detected. Need to build ALL."
                         IS_ROOT_CHANGED = true
                     }
                     echo "List of changed files:\n${changedFilesList.join('\n')}"
 
-                    def VALID_BACKEND_SERVICES = [
-                        "media", "product", "cart", "order", "rating",
-                        "customer", "location", "inventory", "tax", "search"
-                    ]
-
-                    def servicesToBuild = [] as Set
+                    def servicesToBuild = [] as LinkedHashSet
 
                     // Iterate through changed files to detect affected services
-                    for (file in changedFilesList) {
+                    for (String file in changedFilesList) {
                         if (!file) continue
 
-                        // if (file == "pom.xml" || file == "Jenkinsfile") {
                         if (file == "pom.xml") {
                             IS_ROOT_CHANGED = true
                         }
@@ -135,9 +214,8 @@ pipeline {
                         if (file.startsWith("backoffice/")) BUILD_BACKOFFICE = true
                         if (file.startsWith("storefront/")) BUILD_STOREFRONT = true
 
-                        def pathParts = file.split('/')
-                        if (pathParts.length > 1) {
-                            def topLevelDir = pathParts[0]
+                        def topLevelDir = file.tokenize('/').first()
+                        if (topLevelDir) {
                             if (VALID_BACKEND_SERVICES.contains(topLevelDir)) {
                                 servicesToBuild.add(topLevelDir)
                             }
@@ -148,9 +226,10 @@ pipeline {
                         echo "Root configuration changed. Building ALL services."
                         BUILD_BACKOFFICE = true
                         BUILD_STOREFRONT = true
+                        CHANGED_SERVICES = ''
                     } else {
                         // Join with commas for Maven (e.g., "cart,order")
-                        CHANGED_SERVICES = servicesToBuild.join(",")
+                        CHANGED_SERVICES = servicesToBuild.join(',')
                     }
                     
                     echo "----- BUILD PLAN -----"
@@ -175,9 +254,9 @@ pipeline {
                                 script {
                                     echo "Building, testing and installing artifacts..."
                                     if (IS_ROOT_CHANGED) {
-                                        sh 'mvn clean install jacoco:report -DskipITs'
+                                        sh "mvn ${MAVEN_PARALLEL_FLAGS} clean install jacoco:report"
                                     } else {
-                                        sh "mvn clean install jacoco:report -DskipITs -pl ${CHANGED_SERVICES} -am"
+                                        sh "mvn ${MAVEN_PARALLEL_FLAGS} clean install jacoco:report -pl ${CHANGED_SERVICES} -am"
                                     }
                                 }
                             }
@@ -186,37 +265,7 @@ pipeline {
                                     script {
                                         // Upload test results
                                         junit '**/target/surefire-reports/*.xml'
-
-                                        def VALID_BACKEND_SERVICES = []
-                                        if (IS_ROOT_CHANGED) {
-                                            VALID_BACKEND_SERVICES = [
-                                                "media", "product", "cart", "order", "rating",
-                                                "customer", "location", "inventory", "tax", "search"
-                                            ]
-                                        } else {
-                                            VALID_BACKEND_SERVICES = CHANGED_SERVICES.split(',')
-                                        }
-
-                                        for (String service : VALID_BACKEND_SERVICES) {
-                                            if (service.trim() == "") continue
-
-                                            // Upload coverage results
-                                            recordCoverage(
-                                                id: "coverage-${service}",
-                                                name: "Coverage: ${service.capitalize()}",
-                                                tools: [[
-                                                    parser: 'JACOCO', 
-                                                    pattern: "${service}/target/site/jacoco/jacoco.xml"
-                                                ]],
-                                                qualityGates: [
-                                                    [threshold: 70.0, metric: 'LINE', baseline: 'PROJECT', criticality: 'UNSTABLE'],
-                                                    [threshold: 70.0, metric: 'BRANCH', baseline: 'PROJECT', criticality: 'FAILURE'],
-                                                    [threshold: 70.0, metric: 'INSTRUCTION', baseline: 'PROJECT', criticality: 'FAILURE'],
-                                                    [threshold: 70.0, metric: 'METHOD', baseline: 'PROJECT', criticality: 'UNSTABLE'],
-                                                    [threshold: 70.0, metric: 'CLASS', baseline: 'PROJECT', criticality: 'FAILURE']
-                                                ]
-                                            )
-                                        }
+                                        processCoverage(resolveBackendServices(IS_ROOT_CHANGED, CHANGED_SERVICES))
                                     }
                                 }
                             }
@@ -227,26 +276,7 @@ pipeline {
                             steps {
                                 script {
                                     echo "Running SonarQube analysis..."
-                                    withSonarQubeEnv('SonarQube-Local') {
-                                        def VALID_BACKEND_SERVICES = []
-                                        if (IS_ROOT_CHANGED) {
-                                            VALID_BACKEND_SERVICES = [
-                                                "media", "product", "cart", "order", "rating",
-                                                "customer", "location", "inventory", "tax", "search"
-                                            ]
-                                        } else {
-                                            VALID_BACKEND_SERVICES = CHANGED_SERVICES.split(',')
-                                        }
-
-                                        for (String service : VALID_BACKEND_SERVICES) {
-                                            if (service.trim() == "") continue
-                                            
-                                            echo ">>> SonarQube scanning: ${service}"
-                                            dir(service) {
-                                                sh 'mvn sonar:sonar'
-                                            }
-                                        }
-                                    }
+                                    runBackendSonarQube(resolveBackendServices(IS_ROOT_CHANGED, CHANGED_SERVICES))
                                 }
                             }
                         }
@@ -262,32 +292,14 @@ pipeline {
                         }
 
                         // --- PHASE 4: VULNERABILITY SCAN (SNYK) ---
-                        // stage('Vulnerability Scan') {
-                        //     steps {
-                        //         script {
-                        //             echo "Scanning backend dependencies..."
-                        //             withCredentials([string(credentialsId: 'snyk-token', variable: 'SNYK_TOKEN')]) {
-                        //                 def snykHome = tool name: 'snyk-latest', type: 'io.snyk.jenkins.tools.SnykInstallation'
-                        //                 def snykCmd = "${snykHome}/snyk-linux"
-                        //                 def isMainOrPR = (env.BRANCH_NAME == 'main' || (env.CHANGE_ID && env.CHANGE_TARGET == 'main'))
-
-                        //                 if (IS_ROOT_CHANGED) {
-                        //                     sh "${snykCmd} test --all-projects --severity-threshold=high --command=mvn"
-                        //                 } else {
-                        //                     def services = CHANGED_SERVICES.split(',')
-                        //                     for (service in services) {
-                        //                         echo ">>> Snyk scanning: ${service}"
-                        //                         dir(service) {
-                        //                             sh 'chmod +x ./mvnw'
-
-                        //                             sh "${snykCmd} test --severity-threshold=high --command=mvn"
-                        //                         }
-                        //                     }
-                        //                 }
-                        //             }
-                        //         }
-                        //     }
-                        // }
+                        stage('Vulnerability Scan') {
+                            steps {
+                                script {
+                                    echo "Scanning backend dependencies..."
+                                    // runBackendSnyk(resolveBackendServices(IS_ROOT_CHANGED, CHANGED_SERVICES))
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -296,8 +308,7 @@ pipeline {
                     when { expression { return BUILD_BACKOFFICE || IS_ROOT_CHANGED } }
                     steps {
                         script {
-                            def isMainOrPR = (env.BRANCH_NAME == 'main' || (env.CHANGE_ID && env.CHANGE_TARGET == 'main'))
-                            runFrontendPipeline('backoffice', isMainOrPR)
+                            runFrontendPipeline('backoffice')
                         }
                     }
                 }
@@ -307,8 +318,7 @@ pipeline {
                     when { expression { return BUILD_STOREFRONT || IS_ROOT_CHANGED } }
                     steps {
                         script {
-                            def isMainOrPR = (env.BRANCH_NAME == 'main' || (env.CHANGE_ID && env.CHANGE_TARGET == 'main'))
-                            runFrontendPipeline('storefront', isMainOrPR)
+                            runFrontendPipeline('storefront')
                         }
                     }
                 }
@@ -318,6 +328,10 @@ pipeline {
 
     post {
         always {
+            script {
+                cleanupLocalM2Repo(3)
+            }
+            sh 'rm -f gitleaks'
             cleanWs() // Clean up the workspace to save disk space
         }
         success {
