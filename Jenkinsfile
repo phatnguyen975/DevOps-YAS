@@ -7,7 +7,6 @@ def VALID_BACKEND_SERVICES = [
     'media', 'product', 'cart', 'order', 'rating',
     'customer', 'location', 'inventory', 'tax', 'search'
 ]
-def MAVEN_PARALLEL_FLAGS = '-T 1C'
 
 def resolveBackendServices(boolean isRootChanged, String changedServices) {
     return isRootChanged ? VALID_BACKEND_SERVICES : changedServices.split(',').findAll { it?.trim() }
@@ -254,9 +253,9 @@ pipeline {
                                 script {
                                     echo "Building, testing and installing artifacts..."
                                     if (IS_ROOT_CHANGED) {
-                                        sh "mvn ${MAVEN_PARALLEL_FLAGS} clean install jacoco:report"
+                                        sh "mvn clean install jacoco:report"
                                     } else {
-                                        sh "mvn ${MAVEN_PARALLEL_FLAGS} clean install jacoco:report -pl ${CHANGED_SERVICES} -am"
+                                        sh "mvn clean install jacoco:report -pl ${CHANGED_SERVICES} -am"
                                     }
                                 }
                             }
