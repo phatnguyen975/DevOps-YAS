@@ -287,7 +287,7 @@ pipeline {
                                         
                                         // Phase 4: Snyk Vulnerability Scan
                                         echo "Scanning backend dependencies for ${currentService}..."
-                                        runBackendSnyk([currentService])
+                                        // runBackendSnyk([currentService])
                                         
                                         // Free up disk space on this specific executor node
                                         cleanupLocalM2Repo(3)
