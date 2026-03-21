@@ -65,6 +65,7 @@ def runBackendSnyk(List<String> services) {
         services.each { String service ->
             echo ">>> Snyk scanning: ${service}"
             dir(service) {
+                sh 'chmod +x ./mvnw'
                 if (env.BRANCH_NAME == 'main') {
                     sh "npx snyk monitor --project-name=yas-${service}"
                 }
