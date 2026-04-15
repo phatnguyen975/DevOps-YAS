@@ -301,7 +301,7 @@ pipeline {
                                         withCredentials([usernamePassword(credentialsId: 'dockerhub-token', passwordVariable: 'DOCKER_PAT', usernameVariable: 'DOCKER_USER')]) {
                                             sh "echo \$DOCKER_PAT | docker login -u \$DOCKER_USER --password-stdin"
 
-                                            def imageName = "\${DOCKER_USER}/yas-\${currentService}"
+                                            def imageName = "\${DOCKER_USER}/yas-${currentService}"
                                             sh "docker build -t ${imageName}:main ./${currentService}"
                                             sh "docker push ${imageName}:main"
                                             
