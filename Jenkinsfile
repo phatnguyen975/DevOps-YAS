@@ -296,18 +296,6 @@ pipeline {
                                         // echo "Scanning backend dependencies for ${currentService}..."
                                         // runBackendSnyk([currentService])
 
-                                        // Phase 5: Build and Push Docker Image
-                                        echo "Building and Pushing Docker Image for ${currentService}..."
-                                        withCredentials([usernamePassword(credentialsId: 'dockerhub-token', passwordVariable: 'DOCKER_PAT', usernameVariable: 'DOCKER_USER')]) {
-                                            sh "echo \$DOCKER_PAT | docker login -u \$DOCKER_USER --password-stdin"
-
-                                            def imageName = "\${DOCKER_USER}/yas-${currentService}"
-                                            sh "docker build -t ${imageName}:main ./${currentService}"
-                                            sh "docker push ${imageName}:main"
-                                            
-                                            sh "docker logout"
-                                        }
-
                                         // Free up disk space on this specific executor node
                                         cleanupLocalM2Repo(3)
                                         cleanWs()
