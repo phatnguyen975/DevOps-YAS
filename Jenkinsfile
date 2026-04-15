@@ -140,6 +140,8 @@ pipeline {
         TESTCONTAINERS_HOST_OVERRIDE = 'docker'
         // Get the short commit hash for tagging Docker images
         SHORT_COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+        // Explicitly set Docker API version to ensure compatibility with older Docker versions
+        DOCKER_API_VERSION = '1.43'
     }
 
     stages {
