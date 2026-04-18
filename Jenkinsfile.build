@@ -83,7 +83,7 @@ pipeline {
     }
 
     environment {
-        SOURCE_REPO_URL = ''
+        SOURCE_REPO_URL = 'https://github.com/phatnguyen975/DevOps-YAS.git'
         GITOPS_REPO_URL = 'https://github.com/phatnguyen975/GitOps-YAS.git'
         GITOPS_DIR = 'gitops-yas'
         GITOPS_TOKEN_CREDENTIALS_ID = 'gitops-token'
@@ -96,13 +96,6 @@ pipeline {
         stage('Checkout DevOps Pipeline Repository') {
             steps {
                 checkout scm
-                script {
-                    env.SOURCE_REPO_URL = sh(script: 'git config --get remote.origin.url', returnStdout: true).trim()
-                    if (!env.SOURCE_REPO_URL) {
-                        error('Could not determine source repository URL from git remote.origin.url')
-                    }
-                    echo "Detected source repository: ${env.SOURCE_REPO_URL}"
-                }
             }
         }
 
