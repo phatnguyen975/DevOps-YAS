@@ -1,5 +1,3 @@
-import hudson.model.Cause
-
 def SERVICE_PARAM_MAP = [
     cart     : 'TAG_CART',
     tax      : 'TAG_TAX',
@@ -147,8 +145,9 @@ pipeline {
         stage('Resolve Namespace') {
             steps {
                 script {
-                    def userCause = currentBuild.rawBuild.getCause(Cause.UserIdCause)
-                    def userId = normalizeName(userCause?.getUserId() ?: 'anonymous')
+                    def causes = currentBuild.getBuildCauses()
+                    def rawUserId = causes.find { it.userId }?.userId ?: 'anonymous'
+                    def userId = normalizeName(rawUserId)
 
                     def suffix = NON_MAIN_SERVICES ? NON_MAIN_SERVICES.join('-') : 'baseline'
                     suffix = normalizeName(suffix)
