@@ -14,7 +14,8 @@ helm upgrade --install postgres-operator postgres-operator-charts/postgres-opera
 
 helm upgrade --install kafka-operator strimzi/strimzi-kafka-operator \
   --namespace kafka-operator \
-  --create-namespace
+  --create-namespace \
+  --set watchAnyNamespace=true
 
 helm upgrade --install elastic-operator elastic/eck-operator \
   --namespace elastic-system \
@@ -37,3 +38,9 @@ kubectl create namespace keycloak
 kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.2/kubernetes/keycloaks.k8s.keycloak.org-v1.yml
 kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.2/kubernetes/keycloakrealmimports.k8s.keycloak.org-v1.yml
 kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.2/kubernetes/kubernetes.yml -n keycloak
+
+kubectl create clusterrolebinding keycloak-operator-global-admin \
+  --clusterrole=cluster-admin \
+  --serviceaccount=keycloak:keycloak-operator
+
+kubectl set env deployment/keycloak-operator WATCH_NAMESPACE="" -n keycloak
