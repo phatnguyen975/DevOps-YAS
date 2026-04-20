@@ -215,58 +215,58 @@ pipeline {
             }
         }
 
-        stage('Deploy Shared App Configuration') {
-            steps {
-                dir("${env.GITOPS_DIR}") {
-                    sh """
-                        helm dependency build charts/yas-configuration
-                        helm upgrade --install yas-configuration charts/yas-configuration \
-                          -n ${env.TEST_NAMESPACE} \
-                          -f ${env.HELM_SHARED_VALUES_FILE}
-                    """
-                }
-            }
-        }
+        // stage('Deploy Shared App Configuration') {
+        //     steps {
+        //         dir("${env.GITOPS_DIR}") {
+        //             sh """
+        //                 helm dependency build charts/yas-configuration
+        //                 helm upgrade --install yas-configuration charts/yas-configuration \
+        //                   -n ${env.TEST_NAMESPACE} \
+        //                   -f ${env.HELM_SHARED_VALUES_FILE}
+        //             """
+        //         }
+        //     }
+        // }
 
-        stage('Deploy Services') {
-            steps {
-                script {
-                    dir("${env.GITOPS_DIR}") {
-                        SERVICE_PARAM_MAP.each { service, _ ->
-                            def resolvedTag = RESOLVED_TAG_BY_SERVICE[service]
-                            def branchName = RESOLVED_BRANCH_BY_SERVICE[service]
+        // stage('Deploy Services') {
+        //     steps {
+        //         script {
+        //             dir("${env.GITOPS_DIR}") {
+        //                 SERVICE_PARAM_MAP.each { service, _ ->
+        //                     def resolvedTag = RESOLVED_TAG_BY_SERVICE[service]
+        //                     def branchName = RESOLVED_BRANCH_BY_SERVICE[service]
 
-                            if (!resolvedTag) {
-                                error("Missing resolved tag for service '${service}'.")
-                            }
+        //                     if (!resolvedTag) {
+        //                         error("Missing resolved tag for service '${service}'.")
+        //                     }
 
-                            if (resolvedTag == 'main') {
-                                sh """
-                                    helm dependency build charts/${service}
-                                    helm upgrade --install ${service} charts/${service} \
-                                      -n ${env.TEST_NAMESPACE} \
-                                      -f ${env.HELM_SHARED_VALUES_FILE} \
-                                      --set backend.image.tag=${resolvedTag}
-                                """
-                            } else {
-                                sh """
-                                    helm dependency build charts/${service}
-                                    helm upgrade --install ${service} charts/${service} \
-                                      -n ${env.TEST_NAMESPACE} \
-                                      -f ${env.HELM_SHARED_VALUES_FILE} \
-                                      --set backend.image.tag=${resolvedTag} \
-                                      --set backend.service.type=NodePort
-                                """
+        //                     if (resolvedTag == 'main') {
+        //                         sh """
+        //                             helm dependency build charts/${service}
+        //                             helm upgrade --install ${service} charts/${service} \
+        //                               -n ${env.TEST_NAMESPACE} \
+        //                               -f ${env.HELM_SHARED_VALUES_FILE} \
+        //                               --set backend.image.tag=${resolvedTag}
+        //                         """
+        //                     } else {
+        //                         sh """
+        //                             helm dependency build charts/${service}
+        //                             helm upgrade --install ${service} charts/${service} \
+        //                               -n ${env.TEST_NAMESPACE} \
+        //                               -f ${env.HELM_SHARED_VALUES_FILE} \
+        //                               --set backend.image.tag=${resolvedTag} \
+        //                               --set backend.service.type=NodePort
+        //                         """
 
-                                def nodePort = sh(script: "kubectl get svc ${service} -n ${env.TEST_NAMESPACE} -o jsonpath='{.spec.ports[0].nodePort}'", returnStdout: true).trim()
-                                def testDomain = "yas.test.com" 
-                                echo "Service ${service} (branch: ${branchName}, image tag: ${resolvedTag}) is accessible at: http://${testDomain}:${nodePort}"
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        //                         def nodePort = sh(script: "kubectl get svc ${service} -n ${env.TEST_NAMESPACE} -o jsonpath='{.spec.ports[0].nodePort}'", returnStdout: true).trim()
+        //                         def testDomain = "yas.test.com" 
+        //                         echo "Service ${service} (branch: ${branchName}, image tag: ${resolvedTag}) is accessible at: http://${testDomain}:${nodePort}"
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
         stage('Output Cleanup URL') {
             steps {
