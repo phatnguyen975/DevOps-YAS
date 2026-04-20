@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "Bootstrapping cluster with operators and CRDs"
+
 helm repo add postgres-operator-charts https://opensource.zalando.com/postgres-operator/charts/postgres-operator
 helm repo add strimzi https://strimzi.io/charts/
 helm repo add elastic https://helm.elastic.co
@@ -34,13 +36,7 @@ helm upgrade --install reloader stakater/reloader \
   --namespace reloader \
   --create-namespace
 
-kubectl create namespace keycloak
 kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.2/kubernetes/keycloaks.k8s.keycloak.org-v1.yml
 kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.2/kubernetes/keycloakrealmimports.k8s.keycloak.org-v1.yml
-kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.2/kubernetes/kubernetes.yml -n keycloak
 
-kubectl create clusterrolebinding keycloak-operator-global-admin \
-  --clusterrole=cluster-admin \
-  --serviceaccount=keycloak:keycloak-operator
-
-kubectl set env deployment/keycloak-operator WATCH_NAMESPACE="" -n keycloak
+echo "Cluster bootstrapped successfully"
