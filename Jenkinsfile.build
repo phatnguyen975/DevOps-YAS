@@ -219,59 +219,59 @@ pipeline {
             }
         }
 
-        // stage('Deploy Shared Configuration') {
-        //     steps {
-        //         dir("${env.GITOPS_DIR}") {
-        //             sh """
-        //                 helm dependency build charts/yas-configuration
-        //                 helm upgrade --install yas-configuration charts/yas-configuration \
-        //                   -n ${env.TEST_NAMESPACE} \
-        //                   -f ${env.HELM_SHARED_VALUES_FILE}
-        //             """
-        //         }
-        //     }
-        // }
+        stage('Deploy Shared Configuration') {
+            steps {
+                dir("${env.GITOPS_DIR}") {
+                    sh """
+                        helm dependency build charts/yas-configuration
+                        helm upgrade --install yas-configuration charts/yas-configuration \
+                          -n ${env.TEST_NAMESPACE} \
+                          -f ${env.HELM_SHARED_VALUES_FILE}
+                    """
+                }
+            }
+        }
 
-        // stage('Deploy Backend Services') {
-        //     steps {
-        //         script {
-        //             dir("${env.GITOPS_DIR}") {
-        //                 SERVICE_PARAM_MAP.each { service, _ ->
-        //                     def resolvedTag = RESOLVED_TAG_BY_SERVICE[service]
-        //                     def branchName = RESOLVED_BRANCH_BY_SERVICE[service]
+        stage('Deploy Backend Services') {
+            steps {
+                script {
+                    dir("${env.GITOPS_DIR}") {
+                        SERVICE_PARAM_MAP.each { service, _ ->
+                            def resolvedTag = RESOLVED_TAG_BY_SERVICE[service]
+                            def branchName = RESOLVED_BRANCH_BY_SERVICE[service]
 
-        //                     if (!resolvedTag) {
-        //                         error("Missing resolved tag for service '${service}'.")
-        //                     }
+                            if (!resolvedTag) {
+                                error("Missing resolved tag for service '${service}'.")
+                            }
 
-        //                     if (resolvedTag == 'main') {
-        //                         sh """
-        //                             helm dependency build charts/${service}
-        //                             helm upgrade --install ${service} charts/${service} \
-        //                               -n ${env.TEST_NAMESPACE} \
-        //                               -f ${env.HELM_SHARED_VALUES_FILE} \
-        //                               --set backend.image.tag=${resolvedTag}
-        //                         """
-        //                     } else {
-        //                         sh """
-        //                             helm dependency build charts/${service}
-        //                             helm upgrade --install ${service} charts/${service} \
-        //                               -n ${env.TEST_NAMESPACE} \
-        //                               -f ${env.HELM_SHARED_VALUES_FILE} \
-        //                               --set backend.image.tag=${resolvedTag} \
-        //                               --set backend.service.type=NodePort
-        //                         """
+                            if (resolvedTag == 'main') {
+                                sh """
+                                    helm dependency build charts/${service}
+                                    helm upgrade --install ${service} charts/${service} \
+                                      -n ${env.TEST_NAMESPACE} \
+                                      -f ${env.HELM_SHARED_VALUES_FILE} \
+                                      --set backend.image.tag=${resolvedTag}
+                                """
+                            } else {
+                                sh """
+                                    helm dependency build charts/${service}
+                                    helm upgrade --install ${service} charts/${service} \
+                                      -n ${env.TEST_NAMESPACE} \
+                                      -f ${env.HELM_SHARED_VALUES_FILE} \
+                                      --set backend.image.tag=${resolvedTag} \
+                                      --set backend.service.type=NodePort
+                                """
 
-        //                         def nodePort = sh(script: "kubectl get svc ${service} -n ${env.TEST_NAMESPACE} -o jsonpath='{.spec.ports[0].nodePort}'", returnStdout: true).trim()
-        //                         def testDomain = "yas.test.com" 
-        //                         echo "Service ${service} (branch: ${branchName}, image tag: ${resolvedTag}) is accessible at: http://${testDomain}:${nodePort}"
-        //                         echo "Ensure you have the domain added to your /etc/hosts (e.g., 127.0.0.1 yas.test.com)"
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
+                                def nodePort = sh(script: "kubectl get svc ${service} -n ${env.TEST_NAMESPACE} -o jsonpath='{.spec.ports[0].nodePort}'", returnStdout: true).trim()
+                                def testDomain = "yas.test.com" 
+                                echo "Service ${service} (branch: ${branchName}, image tag: ${resolvedTag}) is accessible at: http://${testDomain}:${nodePort}"
+                                echo "Ensure you have the domain added to your /etc/hosts (e.g., 127.0.0.1 yas.test.com)"
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     post {
@@ -282,12 +282,12 @@ pipeline {
             script {
                 echo "=========================================================================="
                 echo "DEPLOYMENT SUCCESSFUL!"
-                echo "Namespace created: ${env.TEST_NAMESPACE}"
+                echo "Your test environment '${env.TEST_NAMESPACE}' is ready."
                 echo "To clean up this environment, simply click here: ${env.CLEAN_JOB_URL}"
                 echo "=========================================================================="
 
                 currentBuild.displayName = "#${currentBuild.number} - ${env.TEST_NAMESPACE}"
-                currentBuild.description = "To clean up, click [here](${env.CLEAN_JOB_URL})."
+                currentBuild.description = "Deployment successful. To clean up this environment when you're done, click [here](${env.CLEAN_JOB_URL})."
             }
         }
         failure {
@@ -299,7 +299,7 @@ pipeline {
                 echo "=========================================================================="
 
                 currentBuild.displayName = "#${currentBuild.number} - ${env.TEST_NAMESPACE}"
-                currentBuild.description = "To clean up, click [here](${env.CLEAN_JOB_URL})."
+                currentBuild.description = "Deployment failed. To clean up any resources that may have been created, click [here](${env.CLEAN_JOB_URL})."
             }
         }
     }
