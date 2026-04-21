@@ -221,7 +221,6 @@ pipeline {
 
         // --- STAGE 2: SECRET SCAN ---
         // Scans the repository for accidentally committed secrets/credentials
-        /*
         stage('Secret Scan') {
             steps {
                 script {
@@ -241,7 +240,6 @@ pipeline {
                 }
             }
         }
-        */
 
         // --- STAGE 3: ANALYZE CHANGES ---
         // Determines exactly which services in the monorepo were modified in this commit/PR
@@ -341,28 +339,27 @@ pipeline {
                                         // Phase 1: Build & Test
                                         echo "Building and testing ${currentService}..."
                                         // The '-am' (also make) flag ensures required internal dependencies (like common-library) are built too
-                                        // sh "mvn clean install jacoco:report -pl ${currentService} -am"
-                                        sh "mvn clean install -DskipTests -pl ${currentService} -am"
+                                        sh "mvn clean install jacoco:report -pl ${currentService} -am"
+                                        // sh "mvn clean install -DskipTests -pl ${currentService} -am"
 
                                         // Process JUnit test results and JaCoCo coverage reports
-                                        // junit testResults: '**/target/surefire-reports/*.xml', skipPublishingChecks: true
-                                        // processCoverage([currentService])
+                                        junit testResults: '**/target/surefire-reports/*.xml', skipPublishingChecks: true
+                                        processCoverage([currentService])
 
                                         // Phase 2: SonarQube Analysis
-                                        // runBackendSonarQube([currentService])
+                                        runBackendSonarQube([currentService])
 
                                         // Phase 3: Quality Gate Check
-                                        // timeout(time: 5, unit: 'MINUTES') {
-                                        //     waitForQualityGate abortPipeline: true
-                                        // }
+                                        timeout(time: 5, unit: 'MINUTES') {
+                                            waitForQualityGate abortPipeline: true
+                                        }
 
                                         // Phase 4: Snyk Vulnerability Scan
-                                        // echo "Scanning backend dependencies for ${currentService}..."
-                                        // runBackendSnyk([currentService])
+                                        echo "Scanning backend dependencies for ${currentService}..."
+                                        runBackendSnyk([currentService])
 
                                         // Phase 5: Build image, tag with commit-id, and push
-                                        // def shortCommit = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : getShortCommitHash()
-                                        def shortCommit = 'main'
+                                        def shortCommit = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : getShortCommitHash()
                                         buildAndPushBackendImage(currentService, shortCommit, env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
 
                                         // Free up disk space on this specific executor node
@@ -380,8 +377,7 @@ pipeline {
                             node() {
                                 stage('Pipeline: backoffice') {
                                     checkout scm
-                                    // runFrontendPipeline('backoffice')
-                                    buildAndPushBackendImage('backoffice', 'main', env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
+                                    runFrontendPipeline('backoffice')
                                     cleanWs()
                                 }
                             }
@@ -394,8 +390,7 @@ pipeline {
                             node() {
                                 stage('Pipeline: storefront') {
                                     checkout scm
-                                    // runFrontendPipeline('storefront')
-                                    buildAndPushBackendImage('storefront', 'main', env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
+                                    runFrontendPipeline('storefront')
                                     cleanWs()
                                 }
                             }
@@ -414,7 +409,6 @@ pipeline {
         }
 
         // --- STAGE 5: MAIN -> DEV GITOPS ---
-        /*
         stage('CD Dev GitOps Update') {
             when {
                 branch 'main'
@@ -509,7 +503,6 @@ pipeline {
                 }
             }
         }
-        */
     }
 
     post {
@@ -517,7 +510,7 @@ pipeline {
             script {
                 cleanupLocalM2Repo(3)
             }
-            // sh 'rm -f gitleaks'
+            sh 'rm -f gitleaks'
             cleanWs()
         }
         success {
