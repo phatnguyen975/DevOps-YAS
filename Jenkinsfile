@@ -381,7 +381,7 @@ pipeline {
                                 stage('Pipeline: backoffice') {
                                     checkout scm
                                     // runFrontendPipeline('backoffice')
-                                    buildAndPushBackendImage('backoffice-bff', 'main', env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
+                                    buildAndPushBackendImage('backoffice', 'main', env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
                                     cleanWs()
                                 }
                             }
@@ -395,7 +395,7 @@ pipeline {
                                 stage('Pipeline: storefront') {
                                     checkout scm
                                     // runFrontendPipeline('storefront')
-                                    buildAndPushBackendImage('storefront-bff', 'main', env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
+                                    buildAndPushBackendImage('storefront', 'main', env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
                                     cleanWs()
                                 }
                             }
