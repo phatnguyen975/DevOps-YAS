@@ -1,13 +1,14 @@
-// These variables maintain the state across different stages of the pipeline
 def CHANGED_SERVICES = ""
 def IS_ROOT_CHANGED = false
 def BUILD_BACKOFFICE = false
 def BUILD_STOREFRONT = false
 
-// List of all valid backend microservices in the monorepo
+// List of all backend microservices in the monorepo
 def VALID_BACKEND_SERVICES = [
-    'media', 'product', 'cart', 'order', 'rating',
-    'customer', 'location', 'inventory', 'tax', 'search'
+    'media', 'product', 'cart', 'order', 'rating', 'customer',
+    'location', 'inventory', 'tax', 'search', 'recommendation',
+    'payment', 'payment-paypal', 'sampledata', 'webhook',
+    'promotion', 'backoffice-bff', 'storefront-bff'
 ]
 
 /**
@@ -360,7 +361,8 @@ pipeline {
                                         // runBackendSnyk([currentService])
 
                                         // Phase 5: Build image, tag with commit-id, and push
-                                        def shortCommit = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : getShortCommitHash()
+                                        // def shortCommit = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : getShortCommitHash()
+                                        def shortCommit = 'main'
                                         buildAndPushBackendImage(currentService, shortCommit, env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
 
                                         // Free up disk space on this specific executor node
@@ -378,7 +380,8 @@ pipeline {
                             node() {
                                 stage('Pipeline: backoffice') {
                                     checkout scm
-                                    runFrontendPipeline('backoffice')
+                                    // runFrontendPipeline('backoffice')
+                                    buildAndPushBackendImage('backoffice-bff', 'main', env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
                                     cleanWs()
                                 }
                             }
@@ -391,7 +394,8 @@ pipeline {
                             node() {
                                 stage('Pipeline: storefront') {
                                     checkout scm
-                                    runFrontendPipeline('storefront')
+                                    // runFrontendPipeline('storefront')
+                                    buildAndPushBackendImage('storefront-bff', 'main', env.DOCKERHUB_NAMESPACE, env.DOCKERHUB_CREDENTIALS_ID)
                                     cleanWs()
                                 }
                             }
@@ -410,6 +414,7 @@ pipeline {
         }
 
         // --- STAGE 5: MAIN -> DEV GITOPS ---
+        /*
         stage('CD Dev GitOps Update') {
             when {
                 branch 'main'
@@ -505,6 +510,7 @@ pipeline {
             }
         }
     }
+    */
 
     post {
         always {
