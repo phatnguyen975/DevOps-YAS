@@ -129,7 +129,7 @@ def runFrontendPipeline(String service) {
 def runBackendPipelineAndPush(String service, String dockerNamespace, String dockerCredentialsId) {
     echo "Building and testing ${service}..."
     // sh "mvn clean install jacoco:report -pl ${service} -am"
-    sh "mvn clean install -DskipTests -pl ${currentService} -am"
+    sh "mvn clean install -DskipTests -pl ${service} -am"
 
     // junit testResults: '**/target/surefire-reports/*.xml', skipPublishingChecks: true
     // processCoverage(service)
