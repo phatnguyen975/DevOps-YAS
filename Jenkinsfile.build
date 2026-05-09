@@ -21,15 +21,15 @@ def SERVICE_PARAM_MAP = [
     'storefront-ui' : 'TAG_STOREFRONT_UI'
 ]
 
-def SERVICE_IMAGE_KEY_MAP = [
+SERVICE_IMAGE_KEY_MAP = [
     'backoffice-ui': 'ui',
     'storefront-ui': 'ui'
 ]
 
 def RESOLVED_BRANCH_BY_SERVICE = [:]
 def RESOLVED_TAG_BY_SERVICE = [:]
-def NON_MAIN_SERVICES = []
-def FRONTEND_ENTRY_SERVICES = ['storefront-ui', 'backoffice-ui']
+NON_MAIN_SERVICES = []
+FRONTEND_ENTRY_SERVICES = ['storefront-ui', 'backoffice-ui']
 
 def normalizeName(String input) {
     return input.toLowerCase().replaceAll('[^a-z0-9-]', '-').replaceAll('-+', '-').replaceAll('^-|-$', '')
