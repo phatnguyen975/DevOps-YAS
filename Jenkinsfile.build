@@ -152,7 +152,7 @@ pipeline {
         GITOPS_REPO_URL = 'https://github.com/phatnguyen975/GitOps-YAS.git'
         HELM_SHARED_VALUES_FILE = 'environments/test/values-shared.yaml'
         GITOPS_DIR = 'gitops-yas'
-        GITOPS_TOKEN_CREDENTIALS_ID = 'gitops-yas-github-token'
+        GITOPS_TOKEN_CREDENTIALS_ID = 'gitops-token'
         CLEAN_JOB_NAME = 'developer_destroy'
         CLEAN_JOB_TOKEN = 'yas-destroy-token'
     }
