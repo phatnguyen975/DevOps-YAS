@@ -352,7 +352,8 @@ pipeline {
                                     helm upgrade --install ${service} charts/${service} \
                                       -n ${env.TEST_NAMESPACE} \
                                       -f ${env.HELM_SHARED_VALUES_FILE} \
-                                      --set ${imageKey}.image.tag=${resolvedTag}
+                                      --set ${imageKey}.image.tag=${resolvedTag} \
+                                      --set ${imageKey}.image.pullPolicy=Always
                                 """
                             } else {
                                 sh """
@@ -361,7 +362,8 @@ pipeline {
                                       -n ${env.TEST_NAMESPACE} \
                                       -f ${env.HELM_SHARED_VALUES_FILE} \
                                       --set ${imageKey}.image.tag=${resolvedTag} \
-                                      --set ${imageKey}.service.type=NodePort
+                                      --set ${imageKey}.service.type=NodePort \
+                                      --set ${imageKey}.image.pullPolicy=Always
                                 """
                             }
 
