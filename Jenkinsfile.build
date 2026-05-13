@@ -279,6 +279,12 @@ pipeline {
                           -n ${env.TEST_NAMESPACE} \
                           -f ${env.HELM_SHARED_VALUES_FILE}
                         
+                        kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.2/kubernetes/keycloaks.k8s.keycloak.org-v1.yml
+                        kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.2/kubernetes/keycloakrealmimports.k8s.keycloak.org-v1.yml
+                        kubectl apply -f https://raw.githubusercontent.com/keycloak/keycloak-k8s-resources/26.0.2/kubernetes/kubernetes.yml -n ${env.TEST_NAMESPACE}
+                        kubectl patch deployment keycloak-operator -n ${env.TEST_NAMESPACE} -p '{"spec":{"template":{"spec":{"containers":[{"name":"keycloak-operator","env":[{"name":"WATCH_NAMESPACE","value":""},{"name":"QUARKUS_VERTX_MAX_EVENT_LOOP_EXECUTE_TIME","value":"60s"}],"resources":{"limits":{"memory":"1Gi"},"requests":{"memory":"512Mi"}}}]}}}}'
+                        kubectl rollout status deployment/keycloak-operator -n ${env.TEST_NAMESPACE} --timeout=120s
+
                         helm upgrade --install keycloak infrastructure/keycloak/keycloak \
                           -n ${env.TEST_NAMESPACE} \
                           -f ${env.HELM_SHARED_VALUES_FILE}
