@@ -341,7 +341,7 @@ pipeline {
         stage('Deploy Services') {
             steps {
                 script {
-                    def keycloakIP = sh(script: "kubectl get svc keycloak-service -n test-admin-rating -o jsonpath='{.spec.clusterIP}'", returnStdout: true).trim()
+                    def keycloakIP = sh(script: "kubectl get svc keycloak-service -n ${env.TEST_NAMESPACE} -o jsonpath='{.spec.clusterIP}'", returnStdout: true).trim()
 
                     dir("${env.GITOPS_DIR}") {
                         SERVICE_PARAM_MAP.each { service, _ ->
@@ -362,7 +362,8 @@ pipeline {
                                       -f ${env.HELM_SHARED_VALUES_FILE} \
                                       --set ${imageKey}.image.tag=${resolvedTag} \
                                       --set ${imageKey}.image.pullPolicy=Always \
-                                      --set global.keycloakInternalIP=${keycloakIP}
+                                      --set global.keycloakInternalIP=${keycloakIP} \
+                                      --set global.identityDomain=identity.yas.test.com
                                 """
                             } else {
                                 sh """
@@ -373,7 +374,8 @@ pipeline {
                                       --set ${imageKey}.image.tag=${resolvedTag} \
                                       --set ${imageKey}.service.type=NodePort \
                                       --set ${imageKey}.image.pullPolicy=Always \
-                                      --set global.keycloakInternalIP=${keycloakIP}
+                                      --set global.keycloakInternalIP=${keycloakIP} \
+                                      --set global.identityDomain=identity.yas.test.com
                                 """
                             }
 
