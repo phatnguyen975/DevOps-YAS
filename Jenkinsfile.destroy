@@ -23,21 +23,7 @@ pipeline {
         stage('Delete Namespace') {
             steps {
                 sh """
-                    kubectl delete kafka,kafkaconnect,kafkaconnector,keycloak,keycloakrealmimport,opentelemetrycollector,grafana,grafanadashboard,grafanadatasource --all -n ${params.TARGET_NAMESPACE} --ignore-not-found || true
-                    kubectl delete pvc --all -n ${params.TARGET_NAMESPACE} --ignore-not-found || true
-
-                    if kubectl get namespace ${params.TARGET_NAMESPACE} >/dev/null 2>&1; then
-                        kubectl delete namespace ${params.TARGET_NAMESPACE} --wait=true --timeout=180s || true
-
-                        if kubectl get namespace ${params.TARGET_NAMESPACE} >/dev/null 2>&1; then
-                            phase=\$(kubectl get namespace ${params.TARGET_NAMESPACE} -o jsonpath='{.status.phase}' || true)
-                            if [ "\${phase}" = "Terminating" ]; then
-                                kubectl patch namespace ${params.TARGET_NAMESPACE} --type=merge -p '{"metadata":{"finalizers":[]}}' || true
-                            fi
-
-                            kubectl delete namespace ${params.TARGET_NAMESPACE} --force --grace-period=0 --ignore-not-found || true
-                        fi
-                    fi
+                    kubectl delete namespace ${params.TARGET_NAMESPACE} --force --grace-period=0 --ignore-not-found
                 """
             }
         }
