@@ -128,20 +128,19 @@ def runFrontendPipeline(String service) {
 
 def runBackendPipelineAndPush(String service, String dockerNamespace, String dockerCredentialsId) {
     echo "Building and testing ${service}..."
-    // sh "mvn clean install jacoco:report -pl ${service} -am"
-    sh "mvn clean install -DskipTests -pl ${service} -am"
+    sh "mvn clean install jacoco:report -pl ${service} -am"
 
-    // junit testResults: '**/target/surefire-reports/*.xml', skipPublishingChecks: true
-    // processCoverage(service)
+    junit testResults: '**/target/surefire-reports/*.xml', skipPublishingChecks: true
+    processCoverage(service)
 
-    // echo "Running SonarQube analysis for ${service}..."
-    // runBackendSonarQube(service)
-    // timeout(time: 5, unit: 'MINUTES') {
-    //     waitForQualityGate abortPipeline: true
-    // }
+    echo "Running SonarQube analysis for ${service}..."
+    runBackendSonarQube(service)
+    timeout(time: 5, unit: 'MINUTES') {
+        waitForQualityGate abortPipeline: true
+    }
 
-    // echo "Scanning backend dependencies for ${service}..."
-    // runBackendSnyk(service)
+    echo "Scanning backend dependencies for ${service}..."
+    runBackendSnyk(service)
 
     echo "Building and pushing Docker image for ${service}..."
     def shortCommit = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : getShortCommitHash()
@@ -149,7 +148,7 @@ def runBackendPipelineAndPush(String service, String dockerNamespace, String doc
 }
 
 def runFrontendPipelineAndPush(String service, String dockerNamespace, String dockerCredentialsId) {
-    // runFrontendPipeline(service)
+    runFrontendPipeline(service)
     def shortCommit = env.GIT_COMMIT ? env.GIT_COMMIT.take(8) : getShortCommitHash()
     buildAndPushFrontendImage(service, shortCommit, dockerNamespace, dockerCredentialsId)
 }
@@ -279,7 +278,6 @@ pipeline {
 
         // --- STAGE 2: SECRET SCAN ---
         // Scans the repository for accidentally committed secrets/credentials
-        /*
         stage('Secret Scan') {
             steps {
                 script {
@@ -299,7 +297,6 @@ pipeline {
                 }
             }
         }
-        */
 
         // --- STAGE 3: ANALYZE CHANGES ---
         // Determines exactly which services in the monorepo were modified in this commit/PR
@@ -540,7 +537,7 @@ pipeline {
             script {
                 cleanupLocalM2Repo(3)
             }
-            // sh 'rm -f gitleaks'
+            sh 'rm -f gitleaks'
             cleanWs()
         }
         success {
