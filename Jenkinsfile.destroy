@@ -23,41 +23,23 @@ pipeline {
         stage('Delete Namespace') {
             steps {
                 sh """
-                    # Step 1: Delete operator-managed CRD resources first to release finalizers
+                    # Step 1: Delete operator-managed CRD resources to release their finalizers
                     kubectl delete kafka,kafkaconnect,kafkaconnector,keycloak,keycloakrealmimport,opentelemetrycollector,grafana,grafanadashboard,grafanadatasource \
                         --all -n ${params.TARGET_NAMESPACE} --ignore-not-found --timeout=60s || true
 
-                    # Step 2: Delete PVCs (these also block namespace termination)
+                    # Step 2: Delete PVCs
                     kubectl delete pvc --all -n ${params.TARGET_NAMESPACE} --ignore-not-found --timeout=60s || true
 
-                    # Step 3: Delete the namespace
-                    kubectl delete namespace ${params.TARGET_NAMESPACE} --ignore-not-found
+                    # Step 3: Delete namespace — kubectl waits for full removal by default
+                    # Exit immediately on success, otherwise fall through to finalizer patch
+                    kubectl delete namespace ${params.TARGET_NAMESPACE} --ignore-not-found --timeout=120s && exit 0 || true
 
-                    # Step 4: Wait for namespace to be fully removed (up to 3 minutes)
-                    echo "Waiting for namespace ${params.TARGET_NAMESPACE} to be fully deleted..."
-                    for i in \$(seq 1 18); do
-                        if ! kubectl get namespace ${params.TARGET_NAMESPACE} > /dev/null 2>&1; then
-                            echo "Namespace ${params.TARGET_NAMESPACE} deleted successfully."
-                            exit 0
-                        fi
-                        echo "Still waiting... (\${i}/18)"
-                        sleep 10
-                    done
+                    # Step 4: Only reached if namespace is stuck in Terminating — patch finalizers directly
+                    echo "Namespace stuck in Terminating. Force-removing finalizers..."
+                    kubectl patch namespace ${params.TARGET_NAMESPACE} \
+                        -p '{"spec":{"finalizers":[]}}' --type=merge 2>/dev/null || true
 
-                    # Step 5: If still stuck, patch all remaining resources to remove finalizers
-                    echo "Namespace still in Terminating state. Removing finalizers from stuck resources..."
-                    for resource in \$(kubectl api-resources --verbs=list --namespaced -o name 2>/dev/null); do
-                        kubectl get "\$resource" -n ${params.TARGET_NAMESPACE} -o name 2>/dev/null | while read item; do
-                            kubectl patch "\$item" -n ${params.TARGET_NAMESPACE} -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
-                        done
-                    done
-
-                    # Final check
-                    if kubectl get namespace ${params.TARGET_NAMESPACE} > /dev/null 2>&1; then
-                        echo "ERROR: Namespace ${params.TARGET_NAMESPACE} is still present after cleanup."
-                        exit 1
-                    fi
-                    echo "Namespace ${params.TARGET_NAMESPACE} deleted successfully."
+                    kubectl wait --for=delete namespace/${params.TARGET_NAMESPACE} --timeout=60s
                 """
             }
         }
