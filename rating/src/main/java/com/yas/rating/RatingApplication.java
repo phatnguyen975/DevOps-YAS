@@ -13,4 +13,6 @@ public class RatingApplication {
     public static void main(String[] args) {
         SpringApplication.run(RatingApplication.class, args);
     }
+
+    // Trigger
 }
