@@ -23,21 +23,32 @@ pipeline {
         stage('Delete Namespace') {
             steps {
                 sh """
-                    # Step 1: Delete operator-managed CRD resources to release their finalizers
+                    # Step 1: Delete operator-managed CRD resources
                     kubectl delete kafka,kafkaconnect,kafkaconnector,keycloak,keycloakrealmimport,opentelemetrycollector,grafana,grafanadashboard,grafanadatasource \
                         --all -n ${params.TARGET_NAMESPACE} --ignore-not-found --timeout=60s || true
 
                     # Step 2: Delete PVCs
                     kubectl delete pvc --all -n ${params.TARGET_NAMESPACE} --ignore-not-found --timeout=60s || true
 
-                    # Step 3: Delete namespace — kubectl waits for full removal by default
-                    # Exit immediately on success, otherwise fall through to finalizer patch
+                    # Step 3: Delete namespace
                     kubectl delete namespace ${params.TARGET_NAMESPACE} --ignore-not-found --timeout=120s && exit 0 || true
 
-                    # Step 4: Only reached if namespace is stuck in Terminating — patch finalizers directly
-                    echo "Namespace stuck in Terminating. Force-removing finalizers..."
-                    kubectl patch namespace ${params.TARGET_NAMESPACE} \
-                        -p '{"spec":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+                    # Step 4: Remove finalizers from resources inside the namespace
+                    echo "Namespace stuck in Terminating. Force-removing finalizers from resources inside..."
+                    for kind in configmaps secrets pods deployments statefulsets daemonsets replicasets services jobs cronjobs serviceaccounts roles rolebindings persistentvolumeclaims; do
+                        kubectl get "\$kind" -n ${params.TARGET_NAMESPACE} \
+                            -o go-template='{{range .items}}{{if .metadata.finalizers}}{{.metadata.name}}{{"\n"}}{{end}}{{end}}' 2>/dev/null \
+                            | while IFS= read -r name; do
+                                echo "  Removing finalizers from \$kind/\$name"
+                                kubectl patch "\$kind" "\$name" -n ${params.TARGET_NAMESPACE} \
+                                    -p '{"metadata":{"finalizers":[]}}' --type=merge 2>/dev/null || true
+                              done
+                    done
+
+                    # Step 5: Force-finalize the namespace via API subresource
+                    echo "Force-finalizing namespace via API subresource..."
+                    printf '{"apiVersion":"v1","kind":"Namespace","metadata":{"name":"%s"},"spec":{"finalizers":[]}}' "${params.TARGET_NAMESPACE}" \
+                        | kubectl replace --raw "/api/v1/namespaces/${params.TARGET_NAMESPACE}/finalize" -f - 2>/dev/null || true
 
                     kubectl wait --for=delete namespace/${params.TARGET_NAMESPACE} --timeout=60s
                 """
