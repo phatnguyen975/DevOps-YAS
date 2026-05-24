@@ -15,4 +15,5 @@ public class RatingApplication {
     }
 
     // Trigger
+    // Test
 }
