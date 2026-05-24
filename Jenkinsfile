@@ -174,11 +174,14 @@ def buildAndPushBackendImage(String service, String tag, String dockerNamespace,
 }
 
 def buildAndPushFrontendImage(String service, String tag, String dockerNamespace, String dockerCredentialsId) {
-    def appDirectory = VALID_FRONTEND_APP_NAME[service]
-    def imageName = VALID_FRONTEND_IMAGE_NAME[service]
-    if (!appDirectory || !imageName) {
-        error("Unsupported frontend service: ${service}")
-    }
+    // def appDirectory = VALID_FRONTEND_APP_NAME[service]
+    // def imageName = VALID_FRONTEND_IMAGE_NAME[service]
+    // if (!appDirectory || !imageName) {
+    //     error("Unsupported frontend service: ${service}")
+    // }
+
+    def appDirectory = (service == 'backoffice-ui') ? 'backoffice' : 'storefront'
+    def imageName = (service == 'backoffice-ui') ? 'yas-backoffice' : 'yas-storefront'
 
     withCredentials([usernamePassword(credentialsId: dockerCredentialsId, usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_TOKEN')]) {
         dir(appDirectory) {
@@ -210,10 +213,12 @@ def retagAndPushBackendImage(String service, String sourceTag, String targetTag,
 }
 
 def retagAndPushFrontendImage(String service, String sourceTag, String targetTag, String dockerNamespace, String dockerCredentialsId) {
-    def imageName = VALID_FRONTEND_IMAGE_NAME[service]
-    if (!imageName) {
-        error("Unsupported frontend service: ${service}")
-    }
+    // def imageName = VALID_FRONTEND_IMAGE_NAME[service]
+    // if (!imageName) {
+    //     error("Unsupported frontend service: ${service}")
+    // }
+
+    def imageName = (service == 'backoffice-ui') ? 'yas-backoffice' : 'yas-storefront'
 
     withCredentials([usernamePassword(credentialsId: dockerCredentialsId, usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_TOKEN')]) {
         def sourceImage = "${dockerNamespace}/${imageName}:${sourceTag}"
