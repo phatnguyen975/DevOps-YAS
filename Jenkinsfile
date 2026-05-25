@@ -15,11 +15,6 @@ def VALID_FRONTEND_APP_NAME = [
     'storefront-ui': 'storefront'
 ]
 
-def VALID_FRONTEND_IMAGE_NAME = [
-    'backoffice-ui': 'yas-backoffice',
-    'storefront-ui': 'yas-storefront'
-]
-
 def resolveBackendServices(boolean isRootChanged, String changedServices) {
     return isRootChanged ? VALID_BACKEND_SERVICES : changedServices.split(',').findAll { it?.trim() }
 }
@@ -129,7 +124,6 @@ def runFrontendPipeline(String service) {
 def runBackendPipelineAndPush(String service, String dockerNamespace, String dockerCredentialsId) {
     echo "Building and testing ${service}..."
     sh "mvn clean install jacoco:report -pl ${service} -am"
-    //sh "mvn clean install -DskipTests -pl ${service} -am"
 
     junit testResults: '**/target/surefire-reports/*.xml', skipPublishingChecks: true
     processCoverage(service)
@@ -174,12 +168,6 @@ def buildAndPushBackendImage(String service, String tag, String dockerNamespace,
 }
 
 def buildAndPushFrontendImage(String service, String tag, String dockerNamespace, String dockerCredentialsId) {
-    // def appDirectory = VALID_FRONTEND_APP_NAME[service]
-    // def imageName = VALID_FRONTEND_IMAGE_NAME[service]
-    // if (!appDirectory || !imageName) {
-    //     error("Unsupported frontend service: ${service}")
-    // }
-
     def appDirectory = (service == 'backoffice-ui') ? 'backoffice' : 'storefront'
     def imageName = (service == 'backoffice-ui') ? 'yas-backoffice' : 'yas-storefront'
 
@@ -213,11 +201,6 @@ def retagAndPushBackendImage(String service, String sourceTag, String targetTag,
 }
 
 def retagAndPushFrontendImage(String service, String sourceTag, String targetTag, String dockerNamespace, String dockerCredentialsId) {
-    // def imageName = VALID_FRONTEND_IMAGE_NAME[service]
-    // if (!imageName) {
-    //     error("Unsupported frontend service: ${service}")
-    // }
-
     def imageName = (service == 'backoffice-ui') ? 'yas-backoffice' : 'yas-storefront'
 
     withCredentials([usernamePassword(credentialsId: dockerCredentialsId, usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_TOKEN')]) {
